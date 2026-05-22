@@ -93,11 +93,11 @@ export function CoverPlanModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg border border-border bg-panel shadow-xl"
+        className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-border-strong bg-panel shadow-[0_24px_80px_-20px_rgba(0,0,0,0.7)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">

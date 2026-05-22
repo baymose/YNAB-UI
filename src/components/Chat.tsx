@@ -123,23 +123,39 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
     }
   }
 
+  const suggestions = [
+    "What's my Ready to Assign?",
+    "How much did I spend on groceries this month?",
+    "Show uncategorized transactions and suggest categories",
+    "Move $50 from Dining Out to Groceries",
+  ];
+
   return (
     <div className="flex h-full flex-col">
-      <div className="shrink-0 border-b border-border px-4 py-3">
-        <div className="text-sm font-medium">Scott</div>
-        <div className="text-xs text-muted">YNAB agent · Claude Opus 4.7</div>
+      <div className="shrink-0 border-b border-border/70 px-5 py-3">
+        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-2">
+          Chat
+        </div>
+        <div className="mt-0.5 text-[11px] text-muted">Claude Opus 4.7</div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 space-y-4 overflow-auto p-4">
+      <div ref={scrollRef} className="flex-1 space-y-4 overflow-auto px-5 py-4">
         {messages.length === 0 && (
-          <div className="space-y-2 text-sm text-muted">
-            <div>Try:</div>
-            <ul className="list-inside list-disc space-y-1">
-              <li>What&apos;s my Ready to Assign?</li>
-              <li>How much did I spend on groceries this month?</li>
-              <li>Show my uncategorized transactions and suggest categories</li>
-              <li>Move $50 from Dining Out to Groceries this month</li>
-            </ul>
+          <div className="space-y-3">
+            <div className="text-xs uppercase tracking-[0.12em] text-muted-2">
+              Try asking
+            </div>
+            <div className="flex flex-col gap-2">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setInput(s)}
+                  className="rounded-lg border border-border bg-panel/60 px-3 py-2 text-left text-sm text-muted transition hover:border-border-strong hover:bg-panel-2 hover:text-foreground"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -148,15 +164,18 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
         ))}
 
         {busy && activeTool && (
-          <div className="text-xs text-muted">
-            <span className="inline-block animate-pulse">●</span>{" "}
-            running <code className="text-accent">{activeTool}</code>…
+          <div className="flex items-center gap-2 text-xs text-muted">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+            running{" "}
+            <code className="rounded bg-panel-2 px-1.5 py-0.5 font-mono text-[11px] text-accent">
+              {activeTool}
+            </code>
           </div>
         )}
       </div>
 
-      <div className="shrink-0 border-t border-border p-3">
-        <div className="flex gap-2">
+      <div className="shrink-0 border-t border-border/70 p-3">
+        <div className="flex items-end gap-2 rounded-xl border border-border bg-panel p-2 transition focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_color-mix(in_oklab,var(--accent)_15%,transparent)]">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -169,14 +188,14 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
             rows={2}
             placeholder="Ask about your budget…"
             disabled={busy}
-            className="flex-1 resize-none rounded-md border border-border bg-panel px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-50"
+            className="flex-1 resize-none bg-transparent px-2 py-1 text-sm outline-none placeholder:text-muted-2 disabled:opacity-50"
           />
           <button
             onClick={send}
             disabled={busy || !input.trim()}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
+            className="rounded-lg bg-gradient-to-br from-accent to-accent-2 px-3.5 py-1.5 text-xs font-semibold text-background shadow-[0_0_20px_-6px_var(--accent)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
           >
-            Send
+            {busy ? "…" : "Send"}
           </button>
         </div>
       </div>
@@ -189,18 +208,18 @@ function MessageBubble({ msg }: { msg: Msg }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[90%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
+        className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
           isUser
-            ? "bg-accent/20 text-foreground"
-            : "bg-panel border border-border"
+            ? "bg-gradient-to-br from-accent/25 to-accent/10 text-foreground"
+            : "border border-border bg-panel/70"
         }`}
       >
         {msg.tools && msg.tools.length > 0 && (
-          <div className="mb-1 flex flex-wrap gap-1 text-[10px] text-muted">
+          <div className="mb-1.5 flex flex-wrap gap-1">
             {msg.tools.map((t, i) => (
               <span
                 key={i}
-                className="rounded bg-panel-2 px-1.5 py-0.5 font-mono"
+                className="rounded-md bg-panel-2 px-1.5 py-0.5 font-mono text-[10px] text-muted"
               >
                 {t.name}
               </span>
@@ -208,7 +227,10 @@ function MessageBubble({ msg }: { msg: Msg }) {
           </div>
         )}
         {msg.content || (
-          <span className="text-muted italic">thinking…</span>
+          <span className="inline-flex items-center gap-1.5 text-muted italic">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-muted" />
+            thinking…
+          </span>
         )}
       </div>
     </div>
