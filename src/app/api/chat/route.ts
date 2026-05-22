@@ -1,9 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { and, asc, eq } from "drizzle-orm";
-import { anthropic, MODEL, SYSTEM_PROMPT } from "@/lib/anthropic";
+import { anthropic, buildSystemPrompt, MODEL } from "@/lib/anthropic";
 import { runTool, tools, WRITE_TOOLS } from "@/lib/tools";
 import { db } from "@/db/client";
-import { chats, messages as messagesTable } from "@/db/schema";
+import { chats, memories as memoriesTable, messages as messagesTable } from "@/db/schema";
 import { requireUserId } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -43,6 +43,16 @@ export async function POST(req: Request) {
           .where(eq(messagesTable.chatId, chatId))
           .orderBy(asc(messagesTable.createdAt));
 
+        const loadMemoryContents = async () => {
+          const rows = await db()
+            .select()
+            .from(memoriesTable)
+            .where(eq(memoriesTable.userId, userId))
+            .orderBy(asc(memoriesTable.createdAt));
+          return rows.map((m) => `[${m.id}] ${m.content}`);
+        };
+        let memoryContents = await loadMemoryContents();
+
         await db()
           .insert(messagesTable)
           .values({ chatId, role: "user", content: message });
@@ -68,7 +78,7 @@ export async function POST(req: Request) {
             system: [
               {
                 type: "text",
-                text: SYSTEM_PROMPT,
+                text: buildSystemPrompt(memoryContents),
                 cache_control: { type: "ephemeral" },
               },
             ],
@@ -102,8 +112,12 @@ export async function POST(req: Request) {
             const result = await runTool(
               block.name,
               (block.input ?? {}) as Record<string, unknown>,
+              { userId },
             );
             if (WRITE_TOOLS.has(block.name)) didMutate = true;
+            if (block.name === "save_memory" || block.name === "delete_memory") {
+              memoryContents = await loadMemoryContents();
+            }
             const summary =
               result && typeof result === "object" && "summary" in result
                 ? (result as { summary: unknown }).summary

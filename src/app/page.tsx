@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Chat } from "@/components/Chat";
 import { Dashboard } from "@/components/Dashboard";
@@ -31,6 +32,12 @@ export default function Home() {
               <span className="h-1.5 w-1.5 rounded-full bg-green" />
               connected
             </div>
+            <Link
+              href="/memories"
+              className="rounded-2xl border border-border px-3 py-1.5 text-xs text-muted hover:text-foreground"
+            >
+              Memories
+            </Link>
             <ThemeToggle />
             <SignOutButton />
           </div>

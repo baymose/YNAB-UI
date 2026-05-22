@@ -110,6 +110,25 @@ export const messages = pgTable(
   (t) => [index("messages_chat_created_idx").on(t.chatId, t.createdAt)],
 );
 
+export const memories = pgTable(
+  "memories",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("memories_user_idx").on(t.userId, t.createdAt)],
+);
+
 export type Chat = typeof chats.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type User = typeof user.$inferSelect;
+export type Memory = typeof memories.$inferSelect;
