@@ -1,14 +1,18 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { asc, eq } from "drizzle-orm";
 import { anthropic, MODEL, SYSTEM_PROMPT } from "@/lib/anthropic";
 import { runTool, tools, WRITE_TOOLS } from "@/lib/tools";
+import { db } from "@/db/client";
+import { chats, messages as messagesTable } from "@/db/schema";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-type ClientMessage = { role: "user" | "assistant"; content: string };
-
 export async function POST(req: Request) {
-  const { messages } = (await req.json()) as { messages: ClientMessage[] };
+  const { chatId, message } = (await req.json()) as {
+    chatId: string;
+    message: string;
+  };
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -19,17 +23,37 @@ export async function POST(req: Request) {
         );
       };
 
-      const convo: Anthropic.MessageParam[] = messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-      let didMutate = false;
-
       try {
+        const [chat] = await db()
+          .select()
+          .from(chats)
+          .where(eq(chats.id, chatId));
+        if (!chat) throw new Error("Chat not found");
+
+        const history = await db()
+          .select()
+          .from(messagesTable)
+          .where(eq(messagesTable.chatId, chatId))
+          .orderBy(asc(messagesTable.createdAt));
+
+        await db()
+          .insert(messagesTable)
+          .values({ chatId, role: "user", content: message });
+
+        const convo: Anthropic.MessageParam[] = [
+          ...history.map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          })),
+          { role: "user", content: message },
+        ];
+
+        let didMutate = false;
+        let assistantText = "";
+        const assistantTools: { name: string }[] = [];
+
         const client = anthropic();
 
-        // Tool-use loop: at most N turns to keep things bounded.
         for (let turn = 0; turn < 10; turn++) {
           const response = await client.messages.create({
             model: MODEL,
@@ -49,22 +73,21 @@ export async function POST(req: Request) {
             messages: convo,
           });
 
-          // Emit any text blocks immediately.
           for (const block of response.content) {
             if (block.type === "text" && block.text) {
               send("text", { text: block.text });
+              assistantText += block.text;
             } else if (block.type === "tool_use") {
               send("tool_use", { name: block.name, input: block.input });
+              assistantTools.push({ name: block.name });
             }
           }
 
           if (response.stop_reason !== "tool_use") {
-            // Final assistant turn; append for completeness and exit.
             convo.push({ role: "assistant", content: response.content });
             break;
           }
 
-          // Run each tool_use block, push tool_results, loop.
           convo.push({ role: "assistant", content: response.content });
           const toolResults: Anthropic.ToolResultBlockParam[] = [];
           for (const block of response.content) {
@@ -82,6 +105,48 @@ export async function POST(req: Request) {
             });
           }
           convo.push({ role: "user", content: toolResults });
+        }
+
+        await db().insert(messagesTable).values({
+          chatId,
+          role: "assistant",
+          content: assistantText,
+          tools: assistantTools.length ? assistantTools : null,
+        });
+        await db()
+          .update(chats)
+          .set({ updatedAt: new Date() })
+          .where(eq(chats.id, chatId));
+
+        if (!chat.title && history.length === 0) {
+          try {
+            const titleResp = await client.messages.create({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 40,
+              messages: [
+                {
+                  role: "user",
+                  content: `Give a concise title (max 6 words, no quotes, no trailing punctuation) for this chat. Reply with only the title.\n\nUser: ${message}\n\nAssistant: ${assistantText.slice(0, 500)}`,
+                },
+              ],
+            });
+            const title = titleResp.content
+              .filter((b) => b.type === "text")
+              .map((b) => (b as { text: string }).text)
+              .join("")
+              .trim()
+              .replace(/^["']|["']$/g, "")
+              .slice(0, 80);
+            if (title) {
+              await db()
+                .update(chats)
+                .set({ title })
+                .where(eq(chats.id, chatId));
+              send("title", { title });
+            }
+          } catch {
+            // title generation is best-effort
+          }
         }
 
         send("done", { mutated: didMutate });

@@ -14,7 +14,7 @@ export function anthropic(): Anthropic {
   return _client;
 }
 
-export const MODEL = "claude-opus-4-7";
+export const MODEL = "claude-sonnet-4-6";
 
 export const SYSTEM_PROMPT = `You are Penny, a personal budget assistant for the user's YNAB (You Need A Budget) account. You help them understand their spending, categorize transactions, assign money to categories, and make smart budgeting decisions.
 
