@@ -1,14 +1,21 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { anthropic, MODEL, SYSTEM_PROMPT } from "@/lib/anthropic";
 import { runTool, tools, WRITE_TOOLS } from "@/lib/tools";
 import { db } from "@/db/client";
 import { chats, messages as messagesTable } from "@/db/schema";
+import { requireUserId } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
+  let userId: string;
+  try {
+    userId = await requireUserId();
+  } catch (r) {
+    return r as Response;
+  }
   const { chatId, message } = (await req.json()) as {
     chatId: string;
     message: string;
@@ -27,7 +34,7 @@ export async function POST(req: Request) {
         const [chat] = await db()
           .select()
           .from(chats)
-          .where(eq(chats.id, chatId));
+          .where(and(eq(chats.id, chatId), eq(chats.userId, userId)));
         if (!chat) throw new Error("Chat not found");
 
         const history = await db()

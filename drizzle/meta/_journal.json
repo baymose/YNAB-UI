@@ -8,6 +8,13 @@
       "when": 1779473140384,
       "tag": "0000_small_omega_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779476134637,
+      "tag": "0001_overconfident_ego",
+      "breakpoints": true
     }
   ]
 }

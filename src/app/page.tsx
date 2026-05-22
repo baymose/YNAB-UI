@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Chat } from "@/components/Chat";
 import { Dashboard } from "@/components/Dashboard";
+import { SignOutButton } from "@/components/SignOutButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
@@ -31,6 +32,7 @@ export default function Home() {
               connected
             </div>
             <ThemeToggle />
+            <SignOutButton />
           </div>
         </div>
       </header>
