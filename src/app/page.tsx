@@ -12,10 +12,10 @@ export default function Home() {
       <header className="flex shrink-0 items-center justify-between border-b border-border/70 px-5 py-3 backdrop-blur">
         <div className="flex items-center gap-3">
           <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent-2 text-background shadow-[0_0_24px_-4px_var(--accent)]">
-            <span className="text-sm font-bold">S</span>
+            <span className="text-sm font-bold">P</span>
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-tight">Scott</div>
+            <div className="text-sm font-semibold tracking-tight">Penny</div>
             <div className="text-[11px] text-muted">YNAB agent</div>
           </div>
         </div>

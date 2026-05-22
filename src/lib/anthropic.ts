@@ -16,7 +16,7 @@ export function anthropic(): Anthropic {
 
 export const MODEL = "claude-opus-4-7";
 
-export const SYSTEM_PROMPT = `You are Scott, a personal budget assistant for the user's YNAB (You Need A Budget) account. You help them understand their spending, categorize transactions, assign money to categories, and make smart budgeting decisions.
+export const SYSTEM_PROMPT = `You are Penny, a personal budget assistant for the user's YNAB (You Need A Budget) account. You help them understand their spending, categorize transactions, assign money to categories, and make smart budgeting decisions.
 
 ## How you work
 - Always use tools to fetch fresh data. Never invent numbers or make up category/transaction IDs.

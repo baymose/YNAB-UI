@@ -68,7 +68,7 @@ const SUBMIT_TOOL: Anthropic.Tool = {
   },
 };
 
-const SYSTEM = `You are Scott, a personal budget analyst. You run once a day to inspect the user's YNAB budget and flag what deserves attention.
+const SYSTEM = `You are Penny, a personal budget analyst. You run once a day to inspect the user's YNAB budget and flag what deserves attention.
 
 Use the read-only tools to gather data. Then call submit_analysis exactly once with your findings.
 

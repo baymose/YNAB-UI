@@ -91,7 +91,7 @@ const SUBMIT_TOOL: Anthropic.Tool = {
   },
 };
 
-const SYSTEM = `You are Scott, a personal budget assistant. Your single task: propose money moves that cover every overspent (negative balance) category in the user's current YNAB month.
+const SYSTEM = `You are Penny, a personal budget assistant. Your single task: propose money moves that cover every overspent (negative balance) category in the user's current YNAB month.
 
 Rules:
 - Call get_categories first to see all categories with budgeted/activity/balance and ready_to_assign.

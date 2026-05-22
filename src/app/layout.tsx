@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Scott — YNAB Agent",
+  title: "Penny — YNAB Agent",
   description: "Personal YNAB assistant powered by Claude.",
 };
 

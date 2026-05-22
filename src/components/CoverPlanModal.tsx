@@ -119,7 +119,7 @@ export function CoverPlanModal({
 
           {!plan && !error && (
             <div className="py-12 text-center text-sm text-muted">
-              Asking Scott to draft a plan…
+              Asking Penny to draft a plan…
             </div>
           )}
 
