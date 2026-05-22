@@ -20,6 +20,7 @@ type Tab =
   | "overview"
   | "pacing"
   | "recurring"
+  | "payees"
   | "insights"
   | "categories"
   | "transactions";
@@ -28,6 +29,7 @@ const TAB_LABELS: Record<Tab, string> = {
   overview: "Overview",
   pacing: "Pacing",
   recurring: "Recurring",
+  payees: "Payees",
   insights: "Insights",
   categories: "Categories",
   transactions: "Transactions",
@@ -59,6 +61,7 @@ export function Dashboard({ revalidateKey }: { revalidateKey: number }) {
         {tab === "overview" && <Overview revalidateKey={revalidateKey} />}
         {tab === "pacing" && <Pacing revalidateKey={revalidateKey} />}
         {tab === "recurring" && <Recurring />}
+        {tab === "payees" && <Payees />}
         {tab === "insights" && <Insights />}
         {tab === "categories" && <Categories revalidateKey={revalidateKey} />}
         {tab === "transactions" && (
@@ -589,6 +592,154 @@ function SubRow({ s }: { s: Subscription }) {
         </span>
       </td>
     </tr>
+  );
+}
+
+type PayeeStat = {
+  payee: string;
+  this_month: number;
+  txn_count: number;
+  avg_txn: number;
+  last_date: string;
+  category_name: string | null;
+  monthly: number[];
+  six_month_total: number;
+  vs_prev_month_pct: number | null;
+};
+type PayeesResponse = {
+  months: string[];
+  current_month: string;
+  top: PayeeStat[];
+  total_this_month: number;
+};
+
+function Sparkline({ values, width = 90, height = 24 }: { values: number[]; width?: number; height?: number }) {
+  const max = Math.max(...values, 1);
+  const stepX = values.length > 1 ? width / (values.length - 1) : 0;
+  const pts = values
+    .map((v, i) => `${(i * stepX).toFixed(1)},${(height - (v / max) * height).toFixed(1)}`)
+    .join(" ");
+  const lastIdx = values.length - 1;
+  const lastX = lastIdx * stepX;
+  const lastY = height - (values[lastIdx] / max) * height;
+  return (
+    <svg width={width} height={height} className="overflow-visible">
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={pts}
+        className="text-accent"
+      />
+      <circle cx={lastX} cy={lastY} r="2" className="fill-accent" />
+    </svg>
+  );
+}
+
+function Payees() {
+  const { data } = useSWR<PayeesResponse>("/api/insights/payees", fetcher);
+
+  if (!data) {
+    return (
+      <div className="space-y-3 p-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-14 rounded-xl skeleton" />
+        ))}
+      </div>
+    );
+  }
+
+  const monthLabels = data.months.map((m) => {
+    const [, mm] = m.split("-");
+    return new Date(2000, Number(mm) - 1, 1).toLocaleString("en-US", { month: "short" });
+  });
+
+  return (
+    <div className="space-y-5 p-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Stat
+          label="Top-10 spend this month"
+          value={fmt(data.top.reduce((s, p) => s + p.this_month, 0))}
+          hint={`of ${fmt(data.total_this_month)} total payee spend`}
+        />
+        <Stat
+          label="Tracked payees"
+          value={String(data.top.length)}
+          hint="Sorted by this month's outflow"
+        />
+      </div>
+
+      <section>
+        <SectionHeader>Top payees · this month</SectionHeader>
+        <div className="overflow-hidden rounded-xl border border-border bg-panel/70">
+          <table className="w-full text-sm">
+            <thead className="text-left text-[11px] uppercase tracking-wider text-muted-2">
+              <tr className="border-b border-border">
+                <th className="px-4 py-2.5 font-medium">Payee</th>
+                <th className="px-4 py-2.5 text-right font-medium">This month</th>
+                <th className="px-4 py-2.5 text-right font-medium">vs prev</th>
+                <th className="px-4 py-2.5 font-medium">
+                  {monthLabels[0]} – {monthLabels[monthLabels.length - 1]}
+                </th>
+                <th className="px-4 py-2.5 text-right font-medium">6-mo total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.top.map((p) => (
+                <tr
+                  key={p.payee}
+                  className="border-t border-border/60 transition hover:bg-panel-2/60"
+                >
+                  <td className="px-4 py-2.5">
+                    <div className="font-medium">{p.payee}</div>
+                    <div className="text-[11px] text-muted-2">
+                      {p.txn_count}× · avg {fmt(p.avg_txn)}
+                      {p.category_name ? ` · ${p.category_name}` : ""}
+                    </div>
+                  </td>
+                  <td className="num px-4 py-2.5 text-right font-medium">
+                    {fmt(p.this_month)}
+                  </td>
+                  <td className="num px-4 py-2.5 text-right">
+                    {p.vs_prev_month_pct == null ? (
+                      <span className="text-muted-2">—</span>
+                    ) : (
+                      <span
+                        className={
+                          p.vs_prev_month_pct > 15
+                            ? "text-red"
+                            : p.vs_prev_month_pct < -15
+                              ? "text-green"
+                              : "text-muted"
+                        }
+                      >
+                        {p.vs_prev_month_pct > 0 ? "+" : ""}
+                        {p.vs_prev_month_pct}%
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <Sparkline values={p.monthly} />
+                  </td>
+                  <td className="num px-4 py-2.5 text-right text-muted">
+                    {fmt(p.six_month_total)}
+                  </td>
+                </tr>
+              ))}
+              {data.top.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">
+                    No outflows this month yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   );
 }
 
