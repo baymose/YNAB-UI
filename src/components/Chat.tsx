@@ -213,17 +213,18 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
   return (
     <div className="flex h-full">
       {sidebarOpen ? (
-        <div className="flex h-full w-56 shrink-0 flex-col border-r border-[var(--hairline-strong)] bg-panel/20">
-          <div className="flex shrink-0 items-center justify-between border-b border-[var(--hairline)] px-4 py-4">
+        <div className="flex h-full w-56 shrink-0 flex-col border-r border-border bg-panel/40">
+          <div className="flex shrink-0 items-center gap-2 p-3">
             <button
               onClick={newChat}
-              className="serif-italic flex-1 text-left text-sm text-accent-2 transition hover:text-parchment"
+              className="flex flex-1 items-center gap-2 rounded-2xl bg-panel-3 px-3 py-2 text-left text-xs font-medium text-foreground transition hover:bg-border"
             >
-              + new entry
+              <span className="grid h-5 w-5 place-items-center rounded-full bg-accent text-background">+</span>
+              New chat
             </button>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="ml-1 px-1.5 py-1 text-xs text-muted-2 hover:text-foreground"
+              className="rounded-xl px-2 py-1.5 text-xs text-muted-2 hover:bg-panel-2 hover:text-foreground"
               title="Collapse"
             >
               «
@@ -235,10 +236,10 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
               return (
                 <div
                   key={c.id}
-                  className={`group flex items-center gap-1 border-l-2 px-3 py-1.5 text-xs transition ${
+                  className={`group flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs transition ${
                     isActive
-                      ? "border-accent text-parchment"
-                      : "border-transparent text-muted hover:border-[var(--hairline-strong)] hover:text-foreground"
+                      ? "bg-panel-3 text-foreground"
+                      : "text-muted hover:bg-panel-2 hover:text-foreground"
                   }`}
                 >
                   <button
@@ -273,12 +274,9 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
       )}
 
       <div className="flex h-full min-w-0 flex-1 flex-col">
-        <div className="shrink-0 border-b border-[var(--hairline-strong)] px-7 pt-5 pb-4">
-          <div className="kicker mb-1.5">Correspondence</div>
-          <div className="flex items-baseline justify-between gap-3">
-            <div className="display-roman text-3xl text-parchment">Penny <span className="serif-italic text-accent">replies</span></div>
-            <div className="text-[10px] tracking-[0.18em] uppercase text-muted-2">Opus 4.7</div>
-          </div>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4">
+          <div className="display-tight text-base text-foreground">Chat</div>
+          <div className="chip">Opus 4.7</div>
         </div>
 
         <div
@@ -286,29 +284,20 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
           className="flex-1 space-y-4 overflow-auto px-5 py-4"
         >
           {messages.length === 0 && (
-            <div className="space-y-5 pt-4 fade-up">
-              <div className="flex items-baseline gap-3">
-                <span className="kicker">Prompts of the House</span>
-                <span className="h-px flex-1 bg-[var(--hairline)]" />
-              </div>
-              <ol className="flex flex-col">
-                {suggestions.map((s, i) => (
-                  <li key={s} className="border-b border-[var(--hairline)] last:border-b-0">
-                    <button
-                      onClick={() => setInput(s)}
-                      className="group flex w-full items-baseline gap-4 py-3 text-left transition"
-                    >
-                      <span className="display-roman num text-xs text-muted-2 w-6 shrink-0">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <span className="serif-italic text-base text-muted transition group-hover:text-parchment">
-                        {s}
-                      </span>
-                      <span className="ml-auto text-muted-2/0 transition group-hover:text-accent">→</span>
-                    </button>
-                  </li>
+            <div className="space-y-3 pt-2 fade-up">
+              <div className="text-xs font-medium text-muted-2">Try asking</div>
+              <div className="grid grid-cols-1 gap-2">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setInput(s)}
+                    className="group card card-interactive flex items-center justify-between gap-3 p-3.5 text-left text-sm text-muted transition hover:text-foreground"
+                  >
+                    <span>{s}</span>
+                    <span className="text-muted-2 transition group-hover:translate-x-0.5 group-hover:text-accent">→</span>
+                  </button>
                 ))}
-              </ol>
+              </div>
             </div>
           )}
 
@@ -327,8 +316,8 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
           )}
         </div>
 
-        <div className="shrink-0 border-t border-[var(--hairline-strong)] px-7 py-5">
-          <div className="group flex items-end gap-3 border-b border-[var(--hairline-strong)] pb-2 transition focus-within:border-accent">
+        <div className="shrink-0 p-3">
+          <div className="card flex items-end gap-2 p-2 transition focus-within:border-accent/60">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -339,21 +328,18 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
                 }
               }}
               rows={2}
-              placeholder="Pose a question to the ledger…"
+              placeholder="Ask Penny anything about your money…"
               disabled={busy}
-              className="serif-italic flex-1 resize-none bg-transparent text-lg leading-snug text-parchment outline-none placeholder:text-muted-2 disabled:opacity-50"
+              className="flex-1 resize-none bg-transparent px-3 py-2 text-sm leading-snug text-foreground outline-none placeholder:text-muted-2 disabled:opacity-50"
             />
             <button
               onClick={send}
               disabled={busy || !input.trim() || !currentChatId}
-              className="kicker shrink-0 pb-1 text-accent transition hover:text-accent-2 disabled:cursor-not-allowed disabled:opacity-25"
+              className="shrink-0 rounded-2xl bg-accent px-4 py-2 text-xs font-semibold text-background transition hover:bg-accent-2 disabled:cursor-not-allowed disabled:bg-panel-3 disabled:text-muted-2"
+              style={!busy && input.trim() ? { boxShadow: "var(--shadow-pop)" } : undefined}
             >
-              {busy ? "··· sending" : "Send →"}
+              {busy ? "…" : "Send"}
             </button>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[10px] tracking-[0.18em] uppercase text-muted-2">
-            <span>Enter to send · Shift+Enter for newline</span>
-            <span className="flourish text-xs">❦</span>
           </div>
         </div>
       </div>
@@ -364,27 +350,23 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
 function MessageBubble({ msg }: { msg: Msg }) {
   const isUser = msg.role === "user";
   return (
-    <div className="fade-up">
-      <div className="kicker mb-1.5 flex items-center gap-2">
-        <span className={isUser ? "text-accent" : "text-muted-2"}>
-          {isUser ? "You wrote" : "Penny replies"}
-        </span>
-        <span className="h-px w-6 bg-[var(--hairline)]" />
-      </div>
+    <div className={`flex fade-up ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={
+        className={`max-w-[88%] px-4 py-3 text-sm leading-relaxed ${
           isUser
-            ? "serif-italic whitespace-pre-wrap text-lg leading-snug text-parchment"
-            : "space-y-2 text-[15px] leading-relaxed text-foreground"
-        }
+            ? "whitespace-pre-wrap rounded-3xl rounded-br-lg bg-accent text-background"
+            : "card space-y-1 rounded-3xl rounded-bl-lg"
+        }`}
+        style={isUser ? { boxShadow: "var(--shadow-pop)" } : undefined}
       >
         {msg.tools && msg.tools.length > 0 && (
-          <div className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[10px] tracking-[0.14em] uppercase text-muted-2">
-            <span>consulted</span>
+          <div className="mb-2 flex flex-wrap gap-1">
             {msg.tools.map((t, i) => (
-              <span key={i} className="font-mono text-muted">
+              <span
+                key={i}
+                className="rounded-full bg-panel-3 px-2 py-0.5 font-mono text-[10px] text-muted"
+              >
                 {t.name}
-                {i < msg.tools!.length - 1 ? "," : ""}
               </span>
             ))}
           </div>
@@ -396,9 +378,9 @@ function MessageBubble({ msg }: { msg: Msg }) {
             <Markdown text={msg.content} />
           )
         ) : (
-          <span className="serif-italic inline-flex items-center gap-2 text-muted">
-            <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-accent" />
-            considering…
+          <span className="inline-flex items-center gap-2 italic text-muted">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+            thinking…
           </span>
         )}
       </div>

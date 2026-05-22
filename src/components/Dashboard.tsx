@@ -40,26 +40,19 @@ export function Dashboard({ revalidateKey }: { revalidateKey: number }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="relative z-10 flex shrink-0 items-baseline gap-0 border-b border-[var(--hairline-strong)] px-8 py-3 overflow-x-auto">
-        {(Object.keys(TAB_LABELS) as Tab[]).map((t, idx) => (
-          <div key={t} className="flex items-baseline">
-            {idx > 0 && <span className="mx-3 text-muted-2/60">·</span>}
-            <button
-              onClick={() => setTab(t)}
-              className={`whitespace-nowrap text-[13px] transition ${
-                tab === t
-                  ? "serif-italic text-accent-2"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              <span className="inline-flex items-baseline gap-1.5">
-                <span className="kicker text-[9px] text-muted-2/70">
-                  {String(idx + 1).padStart(2, "0")}
-                </span>
-                {TAB_LABELS[t]}
-              </span>
-            </button>
-          </div>
+      <div className="flex shrink-0 gap-1 overflow-x-auto p-3">
+        {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`shrink-0 rounded-full px-4 py-2 text-xs font-medium transition ${
+              tab === t
+                ? "bg-foreground text-background"
+                : "text-muted hover:bg-panel-2 hover:text-foreground"
+            }`}
+          >
+            {TAB_LABELS[t]}
+          </button>
         ))}
       </div>
       <div key={tab} className="flex-1 overflow-auto fade-up">
@@ -79,36 +72,9 @@ export function Dashboard({ revalidateKey }: { revalidateKey: number }) {
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-5 flex items-baseline gap-4">
-      <h3 className="serif-italic text-2xl text-parchment">{children}</h3>
-      <span className="h-px flex-1 bg-[var(--hairline)]" />
-      <span className="flourish text-sm">❦</span>
-    </div>
-  );
-}
-
-function FigurePair({
-  label,
-  value,
-  unit,
-  hint,
-}: {
-  label: string;
-  value: string | null;
-  unit?: string;
-  hint?: string;
-}) {
-  return (
-    <div>
-      <div className="kicker mb-1.5">{label}</div>
-      <div className="flex items-baseline gap-2">
-        <span className="display-roman num text-4xl text-parchment">
-          {value ?? <span className="inline-block h-9 w-24 rounded skeleton align-middle" />}
-        </span>
-        {unit && <span className="serif-italic text-base text-muted">{unit}</span>}
-      </div>
-      {hint && <div className="mt-1.5 text-[11px] text-muted-2">{hint}</div>}
-    </div>
+    <h3 className="display-tight mb-3 text-base text-foreground">
+      {children}
+    </h3>
   );
 }
 
@@ -137,53 +103,59 @@ function Overview({ revalidateKey }: { revalidateKey: number }) {
   const rtaDanger = rta != null && rta < 0;
 
   return (
-    <div className="space-y-12 px-8 py-10 fade-up-stagger">
-      {/* Editorial hero: massive serif pull-quote */}
-      <section className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <div className="lg:col-span-7">
-          <div className="kicker mb-3">The Standing</div>
-          <div
-            className={`display num text-[clamp(3.5rem,9vw,7rem)] ${
-              rtaDanger ? "text-red" : "text-parchment"
-            }`}
-          >
-            {rta != null ? (
-              fmt(rta)
-            ) : (
-              <span className="inline-block h-[1em] w-[5ch] rounded skeleton align-middle" />
-            )}
-          </div>
-          <div className="mt-4 flex items-baseline gap-3">
-            <span className="serif-italic text-lg text-muted">
-              {rtaDanger ? "owed back to your budget" : "ready to assign"}
-            </span>
-            <span className="flourish text-base">❦</span>
-          </div>
+    <div className="space-y-6 px-6 py-6 fade-up-stagger">
+      {/* Hero card — the headline number */}
+      <section
+        className="card relative overflow-hidden p-7"
+        style={{
+          background:
+            "radial-gradient(600px 280px at 100% 0%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%), linear-gradient(180deg, var(--panel-2), var(--panel))",
+        }}
+      >
+        <div className="text-xs font-medium text-muted">Ready to assign</div>
+        <div
+          className={`display num mt-2 text-[clamp(2.75rem,7vw,4.5rem)] leading-[0.95] ${
+            rtaDanger ? "text-red" : "text-foreground"
+          }`}
+        >
+          {rta != null ? (
+            fmt(rta)
+          ) : (
+            <span className="inline-block h-[1em] w-[5ch] skeleton align-middle" />
+          )}
         </div>
-
-        <div className="space-y-6 lg:col-span-5 lg:border-l lg:border-[var(--hairline)] lg:pl-8">
-          <FigurePair
-            label="Age of Money"
-            value={cats?.age_of_money != null ? `${cats.age_of_money}` : null}
-            unit="days"
-            hint="Average days of cash on hand"
-          />
-          <div className="rule" />
-          <FigurePair
-            label="On-budget Total"
-            value={onBudgetTotal != null ? fmt(onBudgetTotal) : null}
-          />
+        <div className="mt-2 text-sm text-muted">
+          {rtaDanger ? "You've over-assigned — pull some back." : "Cash waiting for a job."}
         </div>
       </section>
 
-      {/* Overspending: a marginal note */}
-      <section className="flex items-center justify-between gap-6 border-y border-[var(--hairline)] py-5">
-        <div className="flex items-baseline gap-4">
-          <span className="flourish text-2xl leading-none">
-            {overspentCount > 0 ? "§" : "❦"}
+      {/* Supporting stats */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Stat
+          label="Age of money"
+          value={cats?.age_of_money != null ? `${cats.age_of_money}d` : null}
+          hint={cats?.age_of_money != null ? "Average days of cash on hand" : undefined}
+        />
+        <Stat
+          label="On-budget total"
+          value={onBudgetTotal != null ? fmt(onBudgetTotal) : null}
+        />
+      </div>
+
+      {/* Overspending banner */}
+      <section className="card flex items-center justify-between gap-4 p-5">
+        <div className="flex items-center gap-4">
+          <span
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-base ${
+              overspentCount > 0
+                ? "bg-red/15 text-red"
+                : "bg-green/15 text-green"
+            }`}
+          >
+            {overspentCount > 0 ? "!" : "✓"}
           </span>
           <div>
-            <div className="serif-italic text-lg text-foreground">
+            <div className="display-tight text-sm text-foreground">
               {overspentCount > 0
                 ? `${overspentCount} categor${overspentCount === 1 ? "y" : "ies"} overspent`
                 : "All categories funded"}
@@ -198,9 +170,10 @@ function Overview({ revalidateKey }: { revalidateKey: number }) {
         <button
           onClick={() => setCoverOpen(true)}
           disabled={overspentCount === 0}
-          className="serif-italic shrink-0 border-b border-accent/60 pb-0.5 text-sm text-accent-2 transition hover:border-accent-2 hover:text-parchment disabled:cursor-not-allowed disabled:border-transparent disabled:opacity-30"
+          className="shrink-0 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-background transition hover:bg-accent-2 disabled:cursor-not-allowed disabled:bg-panel-3 disabled:text-muted-2"
+          style={overspentCount > 0 ? { boxShadow: "var(--shadow-pop)" } : undefined}
         >
-          Cover overspending →
+          Cover overspending
         </button>
       </section>
 
@@ -219,31 +192,33 @@ function Overview({ revalidateKey }: { revalidateKey: number }) {
       )}
 
       <section>
-        <SectionHeader>The Ledger</SectionHeader>
-        <table className="w-full text-sm">
-          <thead className="text-left">
-            <tr className="border-b border-[var(--hairline-strong)]">
-              <th className="kicker py-2.5 pr-4 font-normal">Account</th>
-              <th className="kicker py-2.5 pr-4 font-normal">Type</th>
-              <th className="kicker py-2.5 pl-4 text-right font-normal">Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {accounts?.map((a) => (
-              <tr
-                key={a.id}
-                className="group border-b border-[var(--hairline)] transition hover:bg-[color-mix(in_oklab,var(--accent)_4%,transparent)]"
-              >
-                <td className="py-3.5 pr-4 serif-italic text-base text-parchment">{a.name}</td>
-                <td className="py-3.5 pr-4 capitalize text-muted">{a.type}</td>
-                <td className="num py-3.5 pl-4 text-right text-base">
-                  <Money amount={a.balance} />
-                </td>
+        <SectionHeader>Accounts</SectionHeader>
+        <div className="card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="text-left text-[11px] font-medium text-muted-2">
+              <tr className="border-b border-border">
+                <th className="px-5 py-3 font-medium">Name</th>
+                <th className="px-5 py-3 font-medium">Type</th>
+                <th className="px-5 py-3 text-right font-medium">Balance</th>
               </tr>
-            ))}
-            {!accounts && <SkeletonRows cols={3} />}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {accounts?.map((a) => (
+                <tr
+                  key={a.id}
+                  className="border-t border-border/60 transition hover:bg-panel-3/40"
+                >
+                  <td className="px-5 py-3.5 font-medium">{a.name}</td>
+                  <td className="px-5 py-3.5 capitalize text-muted">{a.type}</td>
+                  <td className="num px-5 py-3.5 text-right">
+                    <Money amount={a.balance} />
+                  </td>
+                </tr>
+              ))}
+              {!accounts && <SkeletonRows cols={3} />}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );
@@ -263,14 +238,14 @@ function Stat({
   hint?: string;
 }) {
   return (
-    <div className="group relative border-l border-[var(--hairline-strong)] pl-4 py-1">
-      <div className="kicker mb-2">{label}</div>
+    <div className="card card-interactive p-5">
+      <div className="text-[11px] font-medium text-muted">{label}</div>
       <div
-        className={`display-roman num text-[2.25rem] leading-[0.95] ${
-          danger ? "text-red" : accent ? "text-accent-2" : "text-parchment"
+        className={`display num mt-1.5 text-3xl leading-none ${
+          danger ? "text-red" : accent ? "text-accent" : "text-foreground"
         }`}
       >
-        {value ?? <span className="inline-block h-9 w-24 rounded skeleton align-middle" />}
+        {value ?? <span className="inline-block h-8 w-24 skeleton align-middle" />}
       </div>
       {hint && <div className="mt-2 text-[11px] text-muted-2">{hint}</div>}
     </div>
@@ -380,7 +355,7 @@ function Pacing({ revalidateKey }: { revalidateKey: number }) {
     return (
       <div className="space-y-3 px-8 py-10">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-16 rounded-xl skeleton" />
+          <div key={i} className="h-16 rounded-2xl skeleton" />
         ))}
       </div>
     );
@@ -421,7 +396,7 @@ function Pacing({ revalidateKey }: { revalidateKey: number }) {
             <PacingCard key={r.id} row={r} />
           ))}
           {rows.length === 0 && (
-            <div className="rounded-xl border border-border bg-panel/70 p-4 text-sm text-muted">
+            <div className="rounded-2xl border border-border bg-panel/70 p-4 text-sm text-muted">
               No active categories this month.
             </div>
           )}
@@ -463,7 +438,7 @@ function PacingCard({ row }: { row: PacingRow }) {
           : "—";
 
   return (
-    <div className="rounded-xl border border-border bg-panel/70 p-3.5">
+    <div className="rounded-2xl border border-border bg-panel/70 p-3.5">
       <div className="flex items-baseline justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -537,7 +512,7 @@ function Recurring() {
     return (
       <div className="space-y-3 px-8 py-10">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-14 rounded-xl skeleton" />
+          <div key={i} className="h-14 rounded-2xl skeleton" />
         ))}
       </div>
     );
@@ -570,7 +545,7 @@ function Recurring() {
 
       <section>
         <SectionHeader>Detected subscriptions</SectionHeader>
-        <div className="overflow-hidden rounded-xl border border-border bg-panel/70">
+        <div className="overflow-hidden rounded-2xl border border-border bg-panel/70">
           <table className="w-full text-sm">
             <thead className="text-left text-[11px] uppercase tracking-wider text-muted-2">
               <tr className="border-b border-border">
@@ -688,7 +663,7 @@ function Payees() {
     return (
       <div className="space-y-3 px-8 py-10">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-14 rounded-xl skeleton" />
+          <div key={i} className="h-14 rounded-2xl skeleton" />
         ))}
       </div>
     );
@@ -716,7 +691,7 @@ function Payees() {
 
       <section>
         <SectionHeader>Top payees · this month</SectionHeader>
-        <div className="overflow-hidden rounded-xl border border-border bg-panel/70">
+        <div className="overflow-hidden rounded-2xl border border-border bg-panel/70">
           <table className="w-full text-sm">
             <thead className="text-left text-[11px] uppercase tracking-wider text-muted-2">
               <tr className="border-b border-border">
@@ -796,7 +771,7 @@ function Categories({ revalidateKey }: { revalidateKey: number }) {
     return (
       <div className="space-y-8 px-8 py-10">
         {[0, 1].map((i) => (
-          <div key={i} className="overflow-hidden rounded-xl border border-border bg-panel/70">
+          <div key={i} className="overflow-hidden rounded-2xl border border-border bg-panel/70">
             <table className="w-full text-sm">
               <tbody>
                 <SkeletonRows cols={4} />
@@ -813,7 +788,7 @@ function Categories({ revalidateKey }: { revalidateKey: number }) {
       {data.groups.map((g) => (
         <section key={g.id}>
           <SectionHeader>{g.name}</SectionHeader>
-          <div className="overflow-hidden rounded-xl border border-border bg-panel/70">
+          <div className="overflow-hidden rounded-2xl border border-border bg-panel/70">
             <table className="w-full text-sm">
               <thead className="text-left text-[11px] uppercase tracking-wider text-muted-2">
                 <tr className="border-b border-border">
@@ -909,7 +884,7 @@ function Insights() {
       </div>
 
       {!a && refreshing && (
-        <div className="rounded-xl border border-border bg-panel/70 p-4 text-sm text-muted">
+        <div className="rounded-2xl border border-border bg-panel/70 p-4 text-sm text-muted">
           <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-accent align-middle" />
           Generating today&apos;s analysis…
         </div>
@@ -917,7 +892,7 @@ function Insights() {
 
       {a && (
         <>
-          <div className="rounded-xl border border-border bg-panel/70 p-4 text-sm leading-relaxed">
+          <div className="rounded-2xl border border-border bg-panel/70 p-4 text-sm leading-relaxed">
             {a.summary}
           </div>
           <div className="space-y-2">
@@ -925,7 +900,7 @@ function Insights() {
               <FindingCard key={i} f={f} />
             ))}
             {a.findings.length === 0 && (
-              <div className="rounded-xl border border-border bg-panel/70 p-4 text-sm text-muted">
+              <div className="rounded-2xl border border-border bg-panel/70 p-4 text-sm text-muted">
                 Nothing to flag right now.
               </div>
             )}
@@ -950,7 +925,7 @@ function FindingCard({ f }: { f: Finding }) {
         ? "bg-amber/15 text-amber"
         : "bg-panel-2 text-muted";
   return (
-    <div className={`rounded-xl border p-4 ${tone}`}>
+    <div className={`rounded-2xl border p-4 ${tone}`}>
       <div className="mb-1.5 flex items-center gap-2">
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${badgeTone}`}
@@ -994,7 +969,7 @@ function Transactions({ revalidateKey }: { revalidateKey: number }) {
           </button>
         ))}
       </div>
-      <div className="overflow-hidden rounded-xl border border-border bg-panel/70">
+      <div className="overflow-hidden rounded-2xl border border-border bg-panel/70">
         <table className="w-full text-sm">
           <thead className="text-left text-[11px] uppercase tracking-wider text-muted-2">
             <tr className="border-b border-border">

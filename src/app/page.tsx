@@ -9,32 +9,31 @@ export default function Home() {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
-      <header className="relative z-10 shrink-0 border-b border-[var(--hairline-strong)] px-8 pt-5 pb-4 backdrop-blur-sm">
-        <div className="flex items-end justify-between gap-6">
-          <div className="flex items-baseline gap-4">
-            <div className="kicker hidden sm:block">No. {new Date().getFullYear()} · Vol. I</div>
-            <span className="hidden text-muted-2 sm:inline">·</span>
-            <div className="kicker">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>
+      <header className="shrink-0 px-6 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-2 text-background"
+              style={{ boxShadow: "var(--shadow-pop)" }}
+            >
+              <span className="display text-xl leading-none">P</span>
+            </div>
+            <div className="leading-tight">
+              <div className="display-tight text-base text-foreground">Penny</div>
+              <div className="text-[11px] text-muted">your money, friendlier</div>
+            </div>
           </div>
-          <div className="hidden items-center gap-2 text-[10px] tracking-[0.22em] uppercase text-muted-2 sm:flex">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green/70" />
-            Live ledger
-          </div>
-        </div>
-        <div className="mt-3 flex items-end justify-between gap-6">
-          <h1 className="display text-[clamp(2.75rem,5vw,4.25rem)] text-parchment">
-            Penny<span className="text-accent">.</span>
-          </h1>
-          <div className="serif-italic hidden text-base text-muted sm:block">
-            a private ledger, kept by Claude
+          <div className="chip">
+            <span className="h-1.5 w-1.5 rounded-full bg-green" />
+            connected
           </div>
         </div>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <main className="min-h-0 flex-1 border-b border-border/60 lg:border-b-0 lg:border-r">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 lg:flex-row">
+        <main className="min-h-0 flex-1 overflow-hidden rounded-3xl border border-border bg-panel/40" style={{ boxShadow: "var(--shadow-card)" }}>
           <Dashboard revalidateKey={revalidateKey} />
         </main>
-        <aside className="flex h-full min-h-0 w-full flex-col bg-panel/30 lg:w-[560px] xl:w-[640px]">
+        <aside className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-3xl border border-border bg-panel/40 lg:w-[520px] xl:w-[600px]" style={{ boxShadow: "var(--shadow-card)" }}>
           <Chat onMutate={() => setRevalidateKey((k) => k + 1)} />
         </aside>
       </div>
