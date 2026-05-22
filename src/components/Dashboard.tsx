@@ -16,11 +16,18 @@ const fetcher = (url: string) =>
     return r.json();
   });
 
-type Tab = "overview" | "pacing" | "insights" | "categories" | "transactions";
+type Tab =
+  | "overview"
+  | "pacing"
+  | "recurring"
+  | "insights"
+  | "categories"
+  | "transactions";
 
 const TAB_LABELS: Record<Tab, string> = {
   overview: "Overview",
   pacing: "Pacing",
+  recurring: "Recurring",
   insights: "Insights",
   categories: "Categories",
   transactions: "Transactions",
@@ -51,6 +58,7 @@ export function Dashboard({ revalidateKey }: { revalidateKey: number }) {
       <div className="flex-1 overflow-auto">
         {tab === "overview" && <Overview revalidateKey={revalidateKey} />}
         {tab === "pacing" && <Pacing revalidateKey={revalidateKey} />}
+        {tab === "recurring" && <Recurring />}
         {tab === "insights" && <Insights />}
         {tab === "categories" && <Categories revalidateKey={revalidateKey} />}
         {tab === "transactions" && (
@@ -453,6 +461,134 @@ function PacingCard({ row }: { row: PacingRow }) {
         </span>
       </div>
     </div>
+  );
+}
+
+type Subscription = {
+  payee: string;
+  amount: number;
+  cadence: "weekly" | "monthly" | "yearly";
+  occurrences: number;
+  last_date: string;
+  next_expected: string;
+  monthly_cost: number;
+  status: "active" | "missing" | "due_soon";
+  category_name: string | null;
+};
+type SubscriptionsResponse = {
+  total_monthly: number;
+  count: number;
+  subscriptions: Subscription[];
+};
+
+function Recurring() {
+  const { data } = useSWR<SubscriptionsResponse>(
+    "/api/insights/subscriptions",
+    fetcher,
+  );
+
+  if (!data) {
+    return (
+      <div className="space-y-3 p-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-14 rounded-xl skeleton" />
+        ))}
+      </div>
+    );
+  }
+
+  const missing = data.subscriptions.filter((s) => s.status === "missing");
+  const dueSoon = data.subscriptions.filter((s) => s.status === "due_soon");
+  const annualized = data.total_monthly * 12;
+
+  return (
+    <div className="space-y-5 p-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Stat
+          label="Monthly recurring"
+          value={fmt(data.total_monthly)}
+          hint={`${fmt(annualized)} / yr across ${data.count}`}
+        />
+        <Stat
+          label="Due in next 3 days"
+          value={String(dueSoon.length)}
+          accent={dueSoon.length > 0}
+        />
+        <Stat
+          label="Missing this cycle"
+          value={String(missing.length)}
+          danger={missing.length > 0}
+          hint={missing.length > 0 ? "Charge hasn't posted on schedule" : undefined}
+        />
+      </div>
+
+      <section>
+        <SectionHeader>Detected subscriptions</SectionHeader>
+        <div className="overflow-hidden rounded-xl border border-border bg-panel/70">
+          <table className="w-full text-sm">
+            <thead className="text-left text-[11px] uppercase tracking-wider text-muted-2">
+              <tr className="border-b border-border">
+                <th className="px-4 py-2.5 font-medium">Payee</th>
+                <th className="px-4 py-2.5 font-medium">Cadence</th>
+                <th className="px-4 py-2.5 text-right font-medium">Charge</th>
+                <th className="px-4 py-2.5 text-right font-medium">Per month</th>
+                <th className="px-4 py-2.5 font-medium">Next</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.subscriptions.map((s) => (
+                <SubRow key={s.payee} s={s} />
+              ))}
+              {data.subscriptions.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
+                    No recurring charges detected in the last 180 days.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-[11px] text-muted-2">
+          Detected from ≥3 same-payee charges within 5% amount tolerance over 180 days.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function SubRow({ s }: { s: Subscription }) {
+  const statusBadge =
+    s.status === "missing"
+      ? { label: "Missing", cls: "bg-red/15 text-red" }
+      : s.status === "due_soon"
+        ? { label: "Due soon", cls: "bg-amber/15 text-amber" }
+        : { label: "Active", cls: "bg-green/15 text-green" };
+
+  return (
+    <tr className="border-t border-border/60 transition hover:bg-panel-2/60">
+      <td className="px-4 py-2.5">
+        <div className="font-medium">{s.payee}</div>
+        {s.category_name && (
+          <div className="text-[11px] text-muted-2">{s.category_name}</div>
+        )}
+      </td>
+      <td className="px-4 py-2.5 capitalize text-muted">
+        {s.cadence}
+        <span className="text-muted-2"> · {s.occurrences}×</span>
+      </td>
+      <td className="num px-4 py-2.5 text-right">{fmt(s.amount)}</td>
+      <td className="num px-4 py-2.5 text-right text-muted">{fmt(s.monthly_cost)}</td>
+      <td className="num px-4 py-2.5 text-muted">{s.next_expected}</td>
+      <td className="px-4 py-2.5">
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${statusBadge.cls}`}
+        >
+          {statusBadge.label}
+        </span>
+      </td>
+    </tr>
   );
 }
 
