@@ -40,24 +40,29 @@ export function Dashboard({ revalidateKey }: { revalidateKey: number }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-1 border-b border-border/70 px-5 pt-3">
-        <div className="flex gap-1 rounded-lg bg-panel/60 p-1">
-          {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
+      <div className="relative z-10 flex shrink-0 items-baseline gap-0 border-b border-[var(--hairline-strong)] px-8 py-3 overflow-x-auto">
+        {(Object.keys(TAB_LABELS) as Tab[]).map((t, idx) => (
+          <div key={t} className="flex items-baseline">
+            {idx > 0 && <span className="mx-3 text-muted-2/60">·</span>}
             <button
-              key={t}
               onClick={() => setTab(t)}
-              className={`rounded-md px-3.5 py-1.5 text-xs font-medium transition ${
+              className={`whitespace-nowrap text-[13px] transition ${
                 tab === t
-                  ? "bg-panel-2 text-foreground shadow-sm"
+                  ? "serif-italic text-accent-2"
                   : "text-muted hover:text-foreground"
               }`}
             >
-              {TAB_LABELS[t]}
+              <span className="inline-flex items-baseline gap-1.5">
+                <span className="kicker text-[9px] text-muted-2/70">
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+                {TAB_LABELS[t]}
+              </span>
             </button>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
-      <div className="flex-1 overflow-auto">
+      <div key={tab} className="flex-1 overflow-auto fade-up">
         {tab === "overview" && <Overview revalidateKey={revalidateKey} />}
         {tab === "pacing" && <Pacing revalidateKey={revalidateKey} />}
         {tab === "recurring" && <Recurring />}
@@ -74,9 +79,36 @@ export function Dashboard({ revalidateKey }: { revalidateKey: number }) {
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-2">
-      {children}
-    </h3>
+    <div className="mb-5 flex items-baseline gap-4">
+      <h3 className="serif-italic text-2xl text-parchment">{children}</h3>
+      <span className="h-px flex-1 bg-[var(--hairline)]" />
+      <span className="flourish text-sm">❦</span>
+    </div>
+  );
+}
+
+function FigurePair({
+  label,
+  value,
+  unit,
+  hint,
+}: {
+  label: string;
+  value: string | null;
+  unit?: string;
+  hint?: string;
+}) {
+  return (
+    <div>
+      <div className="kicker mb-1.5">{label}</div>
+      <div className="flex items-baseline gap-2">
+        <span className="display-roman num text-4xl text-parchment">
+          {value ?? <span className="inline-block h-9 w-24 rounded skeleton align-middle" />}
+        </span>
+        {unit && <span className="serif-italic text-base text-muted">{unit}</span>}
+      </div>
+      {hint && <div className="mt-1.5 text-[11px] text-muted-2">{hint}</div>}
+    </div>
   );
 }
 
@@ -101,61 +133,76 @@ function Overview({ revalidateKey }: { revalidateKey: number }) {
     ? accounts.filter((a) => a.on_budget).reduce((s, a) => s + a.balance, 0)
     : null;
 
-  return (
-    <div className="space-y-6 p-5">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Stat
-          label="Ready to Assign"
-          value={cats ? fmt(cats.ready_to_assign) : null}
-          accent={cats ? cats.ready_to_assign >= 0 : false}
-          danger={cats ? cats.ready_to_assign < 0 : false}
-        />
-        <Stat
-          label="Age of Money"
-          value={cats?.age_of_money != null ? `${cats.age_of_money}d` : null}
-          hint={cats?.age_of_money != null ? "Average days of cash on hand" : undefined}
-        />
-        <Stat
-          label="On-budget Total"
-          value={onBudgetTotal != null ? fmt(onBudgetTotal) : null}
-        />
-      </div>
+  const rta = cats?.ready_to_assign ?? null;
+  const rtaDanger = rta != null && rta < 0;
 
-      <div className="flex items-center justify-between rounded-xl border border-border bg-panel/70 p-4">
-        <div className="flex items-center gap-3 text-sm">
-          <span
-            className={`grid h-8 w-8 place-items-center rounded-full ${
-              overspentCount > 0 ? "bg-red/15 text-red" : "bg-green/15 text-green"
+  return (
+    <div className="space-y-12 px-8 py-10 fade-up-stagger">
+      {/* Editorial hero: massive serif pull-quote */}
+      <section className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          <div className="kicker mb-3">The Standing</div>
+          <div
+            className={`display num text-[clamp(3.5rem,9vw,7rem)] ${
+              rtaDanger ? "text-red" : "text-parchment"
             }`}
           >
-            {overspentCount > 0 ? "!" : "✓"}
+            {rta != null ? (
+              fmt(rta)
+            ) : (
+              <span className="inline-block h-[1em] w-[5ch] rounded skeleton align-middle" />
+            )}
+          </div>
+          <div className="mt-4 flex items-baseline gap-3">
+            <span className="serif-italic text-lg text-muted">
+              {rtaDanger ? "owed back to your budget" : "ready to assign"}
+            </span>
+            <span className="flourish text-base">❦</span>
+          </div>
+        </div>
+
+        <div className="space-y-6 lg:col-span-5 lg:border-l lg:border-[var(--hairline)] lg:pl-8">
+          <FigurePair
+            label="Age of Money"
+            value={cats?.age_of_money != null ? `${cats.age_of_money}` : null}
+            unit="days"
+            hint="Average days of cash on hand"
+          />
+          <div className="rule" />
+          <FigurePair
+            label="On-budget Total"
+            value={onBudgetTotal != null ? fmt(onBudgetTotal) : null}
+          />
+        </div>
+      </section>
+
+      {/* Overspending: a marginal note */}
+      <section className="flex items-center justify-between gap-6 border-y border-[var(--hairline)] py-5">
+        <div className="flex items-baseline gap-4">
+          <span className="flourish text-2xl leading-none">
+            {overspentCount > 0 ? "§" : "❦"}
           </span>
           <div>
-            {overspentCount > 0 ? (
-              <>
-                <div className="font-medium">
-                  {overspentCount} categor{overspentCount === 1 ? "y" : "ies"} overspent
-                </div>
-                <div className="text-xs text-muted">
-                  Move money to cover before month end
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="font-medium">All categories funded</div>
-                <div className="text-xs text-muted">No overspending this month</div>
-              </>
-            )}
+            <div className="serif-italic text-lg text-foreground">
+              {overspentCount > 0
+                ? `${overspentCount} categor${overspentCount === 1 ? "y" : "ies"} overspent`
+                : "All categories funded"}
+            </div>
+            <div className="mt-0.5 text-xs text-muted">
+              {overspentCount > 0
+                ? "Move money to cover before month end."
+                : "No overspending this month."}
+            </div>
           </div>
         </div>
         <button
           onClick={() => setCoverOpen(true)}
           disabled={overspentCount === 0}
-          className="rounded-md border border-accent/40 bg-accent/10 px-3.5 py-1.5 text-xs font-medium text-accent transition hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-30"
+          className="serif-italic shrink-0 border-b border-accent/60 pb-0.5 text-sm text-accent-2 transition hover:border-accent-2 hover:text-parchment disabled:cursor-not-allowed disabled:border-transparent disabled:opacity-30"
         >
-          Cover overspending
+          Cover overspending →
         </button>
-      </div>
+      </section>
 
       {coverOpen && (
         <CoverPlanModal
@@ -172,33 +219,31 @@ function Overview({ revalidateKey }: { revalidateKey: number }) {
       )}
 
       <section>
-        <SectionHeader>Accounts</SectionHeader>
-        <div className="overflow-hidden rounded-xl border border-border bg-panel/70">
-          <table className="w-full text-sm">
-            <thead className="text-left text-[11px] uppercase tracking-wider text-muted-2">
-              <tr className="border-b border-border">
-                <th className="px-4 py-2.5 font-medium">Name</th>
-                <th className="px-4 py-2.5 font-medium">Type</th>
-                <th className="px-4 py-2.5 text-right font-medium">Balance</th>
+        <SectionHeader>The Ledger</SectionHeader>
+        <table className="w-full text-sm">
+          <thead className="text-left">
+            <tr className="border-b border-[var(--hairline-strong)]">
+              <th className="kicker py-2.5 pr-4 font-normal">Account</th>
+              <th className="kicker py-2.5 pr-4 font-normal">Type</th>
+              <th className="kicker py-2.5 pl-4 text-right font-normal">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {accounts?.map((a) => (
+              <tr
+                key={a.id}
+                className="group border-b border-[var(--hairline)] transition hover:bg-[color-mix(in_oklab,var(--accent)_4%,transparent)]"
+              >
+                <td className="py-3.5 pr-4 serif-italic text-base text-parchment">{a.name}</td>
+                <td className="py-3.5 pr-4 capitalize text-muted">{a.type}</td>
+                <td className="num py-3.5 pl-4 text-right text-base">
+                  <Money amount={a.balance} />
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {accounts?.map((a) => (
-                <tr
-                  key={a.id}
-                  className="border-t border-border/60 transition hover:bg-panel-2/60"
-                >
-                  <td className="px-4 py-2.5">{a.name}</td>
-                  <td className="px-4 py-2.5 capitalize text-muted">{a.type}</td>
-                  <td className="num px-4 py-2.5 text-right">
-                    <Money amount={a.balance} />
-                  </td>
-                </tr>
-              ))}
-              {!accounts && <SkeletonRows cols={3} />}
-            </tbody>
-          </table>
-        </div>
+            ))}
+            {!accounts && <SkeletonRows cols={3} />}
+          </tbody>
+        </table>
       </section>
     </div>
   );
@@ -218,18 +263,16 @@ function Stat({
   hint?: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-border bg-panel/70 p-4 transition hover:border-border-strong">
-      <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-2">
-        {label}
-      </div>
+    <div className="group relative border-l border-[var(--hairline-strong)] pl-4 py-1">
+      <div className="kicker mb-2">{label}</div>
       <div
-        className={`num mt-1.5 text-2xl font-semibold tracking-tight ${
-          danger ? "text-red" : accent ? "text-accent" : "text-foreground"
+        className={`display-roman num text-[2.25rem] leading-[0.95] ${
+          danger ? "text-red" : accent ? "text-accent-2" : "text-parchment"
         }`}
       >
-        {value ?? <span className="inline-block h-7 w-24 rounded skeleton align-middle" />}
+        {value ?? <span className="inline-block h-9 w-24 rounded skeleton align-middle" />}
       </div>
-      {hint && <div className="mt-1 text-[11px] text-muted-2">{hint}</div>}
+      {hint && <div className="mt-2 text-[11px] text-muted-2">{hint}</div>}
     </div>
   );
 }
@@ -335,7 +378,7 @@ function Pacing({ revalidateKey }: { revalidateKey: number }) {
 
   if (!data) {
     return (
-      <div className="space-y-3 p-5">
+      <div className="space-y-3 px-8 py-10">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="h-16 rounded-xl skeleton" />
         ))}
@@ -351,7 +394,7 @@ function Pacing({ revalidateKey }: { revalidateKey: number }) {
   );
 
   return (
-    <div className="space-y-5 p-5">
+    <div className="space-y-8 px-8 py-10">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat
           label="Day of month"
@@ -492,7 +535,7 @@ function Recurring() {
 
   if (!data) {
     return (
-      <div className="space-y-3 p-5">
+      <div className="space-y-3 px-8 py-10">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="h-14 rounded-xl skeleton" />
         ))}
@@ -505,7 +548,7 @@ function Recurring() {
   const annualized = data.total_monthly * 12;
 
   return (
-    <div className="space-y-5 p-5">
+    <div className="space-y-8 px-8 py-10">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat
           label="Monthly recurring"
@@ -643,7 +686,7 @@ function Payees() {
 
   if (!data) {
     return (
-      <div className="space-y-3 p-5">
+      <div className="space-y-3 px-8 py-10">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="h-14 rounded-xl skeleton" />
         ))}
@@ -657,7 +700,7 @@ function Payees() {
   });
 
   return (
-    <div className="space-y-5 p-5">
+    <div className="space-y-8 px-8 py-10">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Stat
           label="Top-10 spend this month"
@@ -751,7 +794,7 @@ function Categories({ revalidateKey }: { revalidateKey: number }) {
 
   if (!data) {
     return (
-      <div className="space-y-5 p-5">
+      <div className="space-y-8 px-8 py-10">
         {[0, 1].map((i) => (
           <div key={i} className="overflow-hidden rounded-xl border border-border bg-panel/70">
             <table className="w-full text-sm">
@@ -766,7 +809,7 @@ function Categories({ revalidateKey }: { revalidateKey: number }) {
   }
 
   return (
-    <div className="space-y-5 p-5">
+    <div className="space-y-8 px-8 py-10">
       {data.groups.map((g) => (
         <section key={g.id}>
           <SectionHeader>{g.name}</SectionHeader>
@@ -843,7 +886,7 @@ function Insights() {
   const refreshing = data?.refreshing || running;
 
   return (
-    <div className="space-y-4 p-5">
+    <div className="space-y-6 px-8 py-10">
       <div className="flex items-start justify-between gap-3">
         <div>
           <SectionHeader>Daily analysis</SectionHeader>
@@ -935,7 +978,7 @@ function Transactions({ revalidateKey }: { revalidateKey: number }) {
   );
 
   return (
-    <div className="p-5">
+    <div className="px-8 py-10">
       <div className="mb-3 flex gap-1 rounded-lg bg-panel/60 p-1">
         {(["all", "uncategorized", "unapproved"] as const).map((f) => (
           <button
