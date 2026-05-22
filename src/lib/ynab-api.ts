@@ -188,7 +188,18 @@ export async function categorizeTransaction(
     transaction_id,
     { transaction: { category_id } },
   );
-  return { id: data.transaction.id, category_id: data.transaction.category_id };
+  const t = data.transaction;
+  const payee = t.payee_name ?? "Transaction";
+  const cat = t.category_name ?? "category";
+  return {
+    id: t.id,
+    category_id: t.category_id,
+    summary: {
+      kind: "categorize",
+      title: "Categorized transaction",
+      detail: `${payee} (${formatDollars(milli(t.amount))}) → ${cat}`,
+    },
+  };
 }
 
 export async function bulkCategorizeTransactions(
@@ -201,9 +212,24 @@ export async function bulkCategorizeTransactions(
       category_id: u.category_id,
     })),
   });
+  const txns = data.transactions ?? [];
+  const byCat = new Map<string, number>();
+  for (const t of txns) {
+    const name = t.category_name ?? "Uncategorized";
+    byCat.set(name, (byCat.get(name) ?? 0) + 1);
+  }
+  const breakdown = [...byCat.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, n]) => `${n} → ${name}`)
+    .join(", ");
   return {
-    updated: (data.transactions ?? []).length,
+    updated: txns.length,
     duplicate_import_ids: data.duplicate_import_ids ?? [],
+    summary: {
+      kind: "bulk_categorize",
+      title: `Categorized ${txns.length} transaction${txns.length === 1 ? "" : "s"}`,
+      detail: breakdown,
+    },
   };
 }
 
@@ -213,15 +239,46 @@ export async function assignToCategory(
   budgeted_dollars: number,
 ) {
   const api = ynabClient();
+  let prior: number | null = null;
+  try {
+    const { data: before } = await api.categories.getMonthCategoryById(
+      BUDGET_ID,
+      month,
+      category_id,
+    );
+    prior = milli(before.category.budgeted);
+  } catch {
+    // best-effort: prior unknown
+  }
   const { data } = await api.categories.updateMonthCategory(
     BUDGET_ID,
     month,
     category_id,
     { category: { budgeted: dollarsToMilli(budgeted_dollars) } },
   );
+  const next = milli(data.category.budgeted);
+  const delta = prior != null ? next - prior : null;
+  const detail =
+    prior != null
+      ? `${data.category.name}: ${formatDollars(prior)} → ${formatDollars(next)}${
+          delta != null
+            ? ` (${delta >= 0 ? "+" : "−"}${formatDollars(Math.abs(delta))})`
+            : ""
+        }`
+      : `${data.category.name} set to ${formatDollars(next)}`;
   return {
     id: data.category.id,
     name: data.category.name,
-    budgeted: milli(data.category.budgeted),
+    budgeted: next,
+    summary: {
+      kind: "assign",
+      title: "Budget assigned",
+      detail,
+    },
   };
+}
+
+function formatDollars(n: number): string {
+  const sign = n < 0 ? "−" : "";
+  return `${sign}$${Math.abs(n).toFixed(2)}`;
 }

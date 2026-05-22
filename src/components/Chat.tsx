@@ -9,6 +9,12 @@ type Msg = {
   tools?: { name: string }[] | null;
 };
 
+type Toast = {
+  id: number;
+  title: string;
+  detail: string;
+};
+
 type ChatSummary = {
   id: string;
   title: string | null;
@@ -23,6 +29,15 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
   const [busy, setBusy] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  function pushToast(title: string, detail: string) {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, title, detail }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 5000);
+  }
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -159,6 +174,13 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
             });
           } else if (event === "tool_result") {
             setActiveTool(null);
+            const summary = data?.summary as
+              | { title?: string; detail?: string }
+              | null
+              | undefined;
+            if (summary && summary.title) {
+              pushToast(summary.title, summary.detail ?? "");
+            }
           } else if (event === "title") {
             setChats((prev) =>
               prev.map((c) =>
@@ -211,7 +233,35 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
   ];
 
   return (
-    <div className="flex h-full">
+    <div className="relative flex h-full">
+      <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className="pointer-events-auto fade-up rounded-2xl border border-accent/40 bg-panel p-3 shadow-lg"
+            style={{ boxShadow: "var(--shadow-pop)" }}
+          >
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent text-[11px] font-bold text-background">
+                ✓
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-foreground">{t.title}</div>
+                {t.detail && (
+                  <div className="mt-0.5 break-words text-xs text-muted">{t.detail}</div>
+                )}
+              </div>
+              <button
+                onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
+                className="text-muted-2 hover:text-foreground"
+                title="Dismiss"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
       {sidebarOpen ? (
         <div className="flex h-full w-56 shrink-0 flex-col border-r border-border bg-panel/40">
           <div className="flex shrink-0 items-center gap-2 p-3">
@@ -276,7 +326,7 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
       <div className="flex h-full min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div className="display-tight text-base text-foreground">Chat</div>
-          <div className="chip">Opus 4.7</div>
+          <div className="chip">Sonnet 4.6</div>
         </div>
 
         <div

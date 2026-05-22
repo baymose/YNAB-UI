@@ -97,7 +97,11 @@ export async function POST(req: Request) {
               (block.input ?? {}) as Record<string, unknown>,
             );
             if (WRITE_TOOLS.has(block.name)) didMutate = true;
-            send("tool_result", { name: block.name, result });
+            const summary =
+              result && typeof result === "object" && "summary" in result
+                ? (result as { summary: unknown }).summary
+                : null;
+            send("tool_result", { name: block.name, result, summary });
             toolResults.push({
               type: "tool_result",
               tool_use_id: block.id,
