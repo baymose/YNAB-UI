@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
   const [revalidateKey, setRevalidateKey] = useState(0);
+  const [chatMaximized, setChatMaximized] = useState(false);
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
@@ -34,11 +35,20 @@ export default function Home() {
         </div>
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 lg:flex-row">
-        <main className="min-h-0 flex-1 overflow-hidden rounded-3xl border border-border bg-panel/40" style={{ boxShadow: "var(--shadow-card)" }}>
-          <Dashboard revalidateKey={revalidateKey} />
-        </main>
-        <aside className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-3xl border border-border bg-panel/40 lg:w-[520px] xl:w-[600px]" style={{ boxShadow: "var(--shadow-card)" }}>
-          <Chat onMutate={() => setRevalidateKey((k) => k + 1)} />
+        {!chatMaximized && (
+          <main className="min-h-0 flex-1 overflow-hidden rounded-3xl border border-border bg-panel/40" style={{ boxShadow: "var(--shadow-card)" }}>
+            <Dashboard revalidateKey={revalidateKey} />
+          </main>
+        )}
+        <aside
+          className={`flex h-full min-h-0 w-full flex-col overflow-hidden rounded-3xl border border-border bg-panel/40 ${chatMaximized ? "flex-1" : "lg:w-[520px] xl:w-[600px]"}`}
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
+          <Chat
+            onMutate={() => setRevalidateKey((k) => k + 1)}
+            maximized={chatMaximized}
+            onToggleMaximize={() => setChatMaximized((v) => !v)}
+          />
         </aside>
       </div>
     </div>

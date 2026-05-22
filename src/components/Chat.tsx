@@ -21,7 +21,15 @@ type ChatSummary = {
   updatedAt: string;
 };
 
-export function Chat({ onMutate }: { onMutate: () => void }) {
+export function Chat({
+  onMutate,
+  maximized = false,
+  onToggleMaximize,
+}: {
+  onMutate: () => void;
+  maximized?: boolean;
+  onToggleMaximize?: () => void;
+}) {
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -326,7 +334,33 @@ export function Chat({ onMutate }: { onMutate: () => void }) {
       <div className="flex h-full min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div className="display-tight text-base text-foreground">Chat</div>
-          <div className="chip">Sonnet 4.6</div>
+          <div className="flex items-center gap-2">
+            <div className="chip">Sonnet 4.6</div>
+            {onToggleMaximize && (
+              <button
+                onClick={onToggleMaximize}
+                title={maximized ? "Restore chat" : "Maximize chat"}
+                aria-label={maximized ? "Restore chat" : "Maximize chat"}
+                className="grid h-7 w-7 place-items-center rounded-lg text-muted transition hover:bg-panel-2 hover:text-foreground"
+              >
+                {maximized ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 3v4a2 2 0 0 1-2 2H3" />
+                    <path d="M15 3v4a2 2 0 0 0 2 2h4" />
+                    <path d="M9 21v-4a2 2 0 0 0-2-2H3" />
+                    <path d="M15 21v-4a2 2 0 0 1 2-2h4" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9V5a2 2 0 0 1 2-2h4" />
+                    <path d="M21 9V5a2 2 0 0 0-2-2h-4" />
+                    <path d="M3 15v4a2 2 0 0 0 2 2h4" />
+                    <path d="M21 15v4a2 2 0 0 1-2 2h-4" />
+                  </svg>
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
         <div
