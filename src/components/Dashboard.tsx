@@ -16,10 +16,11 @@ const fetcher = (url: string) =>
     return r.json();
   });
 
-type Tab = "overview" | "insights" | "categories" | "transactions";
+type Tab = "overview" | "pacing" | "insights" | "categories" | "transactions";
 
 const TAB_LABELS: Record<Tab, string> = {
   overview: "Overview",
+  pacing: "Pacing",
   insights: "Insights",
   categories: "Categories",
   transactions: "Transactions",
@@ -49,6 +50,7 @@ export function Dashboard({ revalidateKey }: { revalidateKey: number }) {
       </div>
       <div className="flex-1 overflow-auto">
         {tab === "overview" && <Overview revalidateKey={revalidateKey} />}
+        {tab === "pacing" && <Pacing revalidateKey={revalidateKey} />}
         {tab === "insights" && <Insights />}
         {tab === "categories" && <Categories revalidateKey={revalidateKey} />}
         {tab === "transactions" && (
@@ -234,6 +236,223 @@ function SkeletonRows({ cols }: { cols: number }) {
         </tr>
       ))}
     </>
+  );
+}
+
+type PacingRow = {
+  id: string;
+  name: string;
+  group: string;
+  budgeted: number;
+  spent: number;
+  balance: number;
+  pctSpent: number;
+  pctElapsed: number;
+  dailyPace: number;
+  projected: number;
+  overage: number;
+  daysUntilEmpty: number | null;
+  status: "over" | "risk" | "ahead" | "ok" | "idle";
+};
+
+function computePacing(cats: CategoriesResponse): {
+  rows: PacingRow[];
+  daysElapsed: number;
+  daysInMonth: number;
+  daysLeft: number;
+} {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysElapsed = now.getDate();
+  const daysLeft = Math.max(0, daysInMonth - daysElapsed);
+  const pctElapsed = daysElapsed / daysInMonth;
+
+  const rows: PacingRow[] = [];
+  for (const g of cats.groups) {
+    if (g.name === "Internal Master Category" || g.name === "Credit Card Payments") continue;
+    for (const c of g.categories) {
+      if (c.budgeted <= 0 && c.activity === 0) continue;
+      const spent = Math.max(0, -c.activity);
+      const pctSpent = c.budgeted > 0 ? spent / c.budgeted : 0;
+      const dailyPace = daysElapsed > 0 ? spent / daysElapsed : 0;
+      const projected = dailyPace * daysInMonth;
+      const overage = projected - c.budgeted;
+      const daysUntilEmpty =
+        dailyPace > 0 && c.balance > 0 ? c.balance / dailyPace : null;
+
+      let status: PacingRow["status"];
+      if (c.balance < 0) status = "over";
+      else if (c.budgeted === 0) status = "idle";
+      else if (daysUntilEmpty !== null && daysUntilEmpty < daysLeft) status = "risk";
+      else if (pctSpent < pctElapsed - 0.1) status = "ahead";
+      else status = "ok";
+
+      rows.push({
+        id: c.id,
+        name: c.name,
+        group: g.name,
+        budgeted: c.budgeted,
+        spent,
+        balance: c.balance,
+        pctSpent,
+        pctElapsed,
+        dailyPace,
+        projected,
+        overage,
+        daysUntilEmpty,
+        status,
+      });
+    }
+  }
+
+  const rank = { over: 0, risk: 1, ok: 2, ahead: 3, idle: 4 };
+  rows.sort((a, b) => {
+    if (rank[a.status] !== rank[b.status]) return rank[a.status] - rank[b.status];
+    return b.overage - a.overage;
+  });
+
+  return { rows, daysElapsed, daysInMonth, daysLeft };
+}
+
+function Pacing({ revalidateKey }: { revalidateKey: number }) {
+  const { data } = useSWR<CategoriesResponse>(
+    ["/api/ynab/categories", revalidateKey],
+    ([url]) => fetcher(url as string),
+  );
+
+  if (!data) {
+    return (
+      <div className="space-y-3 p-5">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-16 rounded-xl skeleton" />
+        ))}
+      </div>
+    );
+  }
+
+  const { rows, daysElapsed, daysInMonth, daysLeft } = computePacing(data);
+  const atRisk = rows.filter((r) => r.status === "over" || r.status === "risk");
+  const totalProjectedOverage = atRisk.reduce(
+    (s, r) => s + Math.max(0, r.overage),
+    0,
+  );
+
+  return (
+    <div className="space-y-5 p-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Stat
+          label="Day of month"
+          value={`${daysElapsed} / ${daysInMonth}`}
+          hint={`${daysLeft} days remaining`}
+        />
+        <Stat
+          label="At-risk categories"
+          value={String(atRisk.length)}
+          danger={atRisk.length > 0}
+        />
+        <Stat
+          label="Projected overage"
+          value={fmt(totalProjectedOverage)}
+          danger={totalProjectedOverage > 0}
+          hint="If current pace holds through month end"
+        />
+      </div>
+
+      <section>
+        <SectionHeader>Category burn-down</SectionHeader>
+        <div className="space-y-2">
+          {rows.map((r) => (
+            <PacingCard key={r.id} row={r} />
+          ))}
+          {rows.length === 0 && (
+            <div className="rounded-xl border border-border bg-panel/70 p-4 text-sm text-muted">
+              No active categories this month.
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function PacingCard({ row }: { row: PacingRow }) {
+  const pct = Math.min(1, row.pctSpent);
+  const paceMark = Math.min(1, row.pctElapsed);
+
+  const barColor =
+    row.status === "over"
+      ? "bg-red"
+      : row.status === "risk"
+        ? "bg-amber"
+        : row.status === "ahead"
+          ? "bg-green"
+          : "bg-accent";
+
+  const statusBadge: Record<PacingRow["status"], { label: string; cls: string }> = {
+    over: { label: "Overspent", cls: "bg-red/15 text-red" },
+    risk: { label: "Will overspend", cls: "bg-amber/15 text-amber" },
+    ahead: { label: "Under pace", cls: "bg-green/15 text-green" },
+    ok: { label: "On track", cls: "bg-panel-2 text-muted" },
+    idle: { label: "No budget", cls: "bg-panel-2 text-muted" },
+  };
+  const badge = statusBadge[row.status];
+
+  const daysHint =
+    row.status === "over"
+      ? `${fmt(-row.balance)} over`
+      : row.daysUntilEmpty !== null
+        ? `~${Math.floor(row.daysUntilEmpty)}d left at this pace`
+        : row.budgeted > 0
+          ? "no spend yet"
+          : "—";
+
+  return (
+    <div className="rounded-xl border border-border bg-panel/70 p-3.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-medium">{row.name}</span>
+            <span
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${badge.cls}`}
+            >
+              {badge.label}
+            </span>
+          </div>
+          <div className="text-[11px] text-muted-2">{row.group}</div>
+        </div>
+        <div className="num shrink-0 text-right text-xs text-muted">
+          <div>
+            {fmt(row.spent)} <span className="text-muted-2">/ {fmt(row.budgeted)}</span>
+          </div>
+          <div className="text-[11px] text-muted-2">{daysHint}</div>
+        </div>
+      </div>
+
+      <div className="relative mt-2.5 h-2 overflow-hidden rounded-full bg-panel-2">
+        <div
+          className={`absolute inset-y-0 left-0 ${barColor}`}
+          style={{ width: `${pct * 100}%` }}
+        />
+        <div
+          className="absolute inset-y-0 w-px bg-foreground/70"
+          style={{ left: `${paceMark * 100}%` }}
+          title="Today (linear pace)"
+        />
+      </div>
+
+      <div className="mt-1.5 flex justify-between text-[10px] text-muted-2">
+        <span>{Math.round(row.pctSpent * 100)}% spent</span>
+        <span>
+          {row.overage > 0
+            ? `proj. ${fmt(row.overage)} over`
+            : row.budgeted > 0
+              ? `proj. ${fmt(-row.overage)} under`
+              : ""}
+        </span>
+      </div>
+    </div>
   );
 }
 
