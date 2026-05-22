@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark light;
+
   /* Warm tactile clay — soft dark with brown undertones */
   --background: #1a1410;
   --foreground: #f5ead8;
@@ -32,6 +34,72 @@
   --shadow-pop:
     0 1px 0 0 rgba(255, 230, 200, 0.18) inset,
     0 8px 20px -6px rgba(249, 116, 86, 0.35);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    /* Warm paper — cream surfaces, espresso ink */
+    --background: #f4ecd9;
+    --foreground: #2a1f17;
+    --panel: #faf2df;
+    --panel-2: #efe4cb;
+    --panel-3: #e6d8ba;
+    --border: #ddcdaa;
+    --border-strong: #c9b58c;
+    --muted: #7a6552;
+    --muted-2: #a89380;
+
+    /* Deeper persimmon — keeps contrast on cream */
+    --accent: #d9522f;
+    --accent-2: #e8704b;
+    --accent-soft: #d9522f1a;
+    --green: #5f8a4a;
+    --red: #c84a3a;
+    --amber: #c69536;
+
+    /* Light, soft warm shadows */
+    --shadow-card:
+      0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
+      0 1px 2px 0 rgba(80, 50, 20, 0.06),
+      0 6px 18px -10px rgba(80, 50, 20, 0.18);
+    --shadow-card-hover:
+      0 1px 0 0 rgba(255, 255, 255, 0.7) inset,
+      0 2px 4px 0 rgba(80, 50, 20, 0.08),
+      0 14px 28px -14px rgba(80, 50, 20, 0.22);
+    --shadow-pop:
+      0 1px 0 0 rgba(255, 255, 255, 0.5) inset,
+      0 6px 16px -4px rgba(217, 82, 47, 0.32);
+  }
+}
+
+/* Manual override — wins over OS preference */
+:root[data-theme="light"] {
+  --background: #f4ecd9;
+  --foreground: #2a1f17;
+  --panel: #faf2df;
+  --panel-2: #efe4cb;
+  --panel-3: #e6d8ba;
+  --border: #ddcdaa;
+  --border-strong: #c9b58c;
+  --muted: #7a6552;
+  --muted-2: #a89380;
+  --accent: #d9522f;
+  --accent-2: #e8704b;
+  --accent-soft: #d9522f1a;
+  --green: #5f8a4a;
+  --red: #c84a3a;
+  --amber: #c69536;
+  --shadow-card:
+    0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
+    0 1px 2px 0 rgba(80, 50, 20, 0.06),
+    0 6px 18px -10px rgba(80, 50, 20, 0.18);
+  --shadow-card-hover:
+    0 1px 0 0 rgba(255, 255, 255, 0.7) inset,
+    0 2px 4px 0 rgba(80, 50, 20, 0.08),
+    0 14px 28px -14px rgba(80, 50, 20, 0.22);
+  --shadow-pop:
+    0 1px 0 0 rgba(255, 255, 255, 0.5) inset,
+    0 6px 16px -4px rgba(217, 82, 47, 0.32);
 }
 
 @theme inline {

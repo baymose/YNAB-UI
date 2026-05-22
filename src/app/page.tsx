@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Chat } from "@/components/Chat";
 import { Dashboard } from "@/components/Dashboard";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
   const [revalidateKey, setRevalidateKey] = useState(0);
@@ -23,9 +24,12 @@ export default function Home() {
               <div className="text-[11px] text-muted">your money, friendlier</div>
             </div>
           </div>
-          <div className="chip">
-            <span className="h-1.5 w-1.5 rounded-full bg-green" />
-            connected
+          <div className="flex items-center gap-3">
+            <div className="chip">
+              <span className="h-1.5 w-1.5 rounded-full bg-green" />
+              connected
+            </div>
+            <ThemeToggle />
           </div>
         </div>
       </header>
