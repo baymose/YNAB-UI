@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Markdown } from "./Markdown";
 
 type Msg = {
   role: "user" | "assistant";
@@ -208,10 +209,10 @@ function MessageBubble({ msg }: { msg: Msg }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+        className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
           isUser
-            ? "bg-gradient-to-br from-accent/25 to-accent/10 text-foreground"
-            : "border border-border bg-panel/70"
+            ? "whitespace-pre-wrap bg-gradient-to-br from-accent/25 to-accent/10 text-foreground"
+            : "space-y-1 border border-border bg-panel/70"
         }`}
       >
         {msg.tools && msg.tools.length > 0 && (
@@ -226,7 +227,13 @@ function MessageBubble({ msg }: { msg: Msg }) {
             ))}
           </div>
         )}
-        {msg.content || (
+        {msg.content ? (
+          isUser ? (
+            msg.content
+          ) : (
+            <Markdown text={msg.content} />
+          )
+        ) : (
           <span className="inline-flex items-center gap-1.5 text-muted italic">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-muted" />
             thinking…
