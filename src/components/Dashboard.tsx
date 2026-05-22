@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { fmt, Money } from "./money";
+import { CoverPlanModal } from "./CoverPlanModal";
 import type {
   Account,
   CategoriesResponse,
@@ -15,7 +16,7 @@ const fetcher = (url: string) =>
     return r.json();
   });
 
-type Tab = "overview" | "categories" | "transactions";
+type Tab = "overview" | "insights" | "categories" | "transactions";
 
 export function Dashboard({ revalidateKey }: { revalidateKey: number }) {
   const [tab, setTab] = useState<Tab>("overview");
@@ -23,7 +24,7 @@ export function Dashboard({ revalidateKey }: { revalidateKey: number }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 gap-1 border-b border-border px-4 pt-3">
-        {(["overview", "categories", "transactions"] as Tab[]).map((t) => (
+        {(["overview", "insights", "categories", "transactions"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -39,6 +40,7 @@ export function Dashboard({ revalidateKey }: { revalidateKey: number }) {
       </div>
       <div className="flex-1 overflow-auto">
         {tab === "overview" && <Overview revalidateKey={revalidateKey} />}
+        {tab === "insights" && <Insights />}
         {tab === "categories" && <Categories revalidateKey={revalidateKey} />}
         {tab === "transactions" && (
           <Transactions revalidateKey={revalidateKey} />
@@ -57,6 +59,13 @@ function Overview({ revalidateKey }: { revalidateKey: number }) {
     ["/api/ynab/categories", revalidateKey],
     ([url]) => fetcher(url as string),
   );
+  const [coverOpen, setCoverOpen] = useState(false);
+
+  const overspentCount =
+    cats?.groups.reduce(
+      (n, g) => n + g.categories.filter((c) => c.balance < 0).length,
+      0,
+    ) ?? 0;
 
   return (
     <div className="space-y-6 p-4">
@@ -83,6 +92,40 @@ function Overview({ revalidateKey }: { revalidateKey: number }) {
           }
         />
       </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-border bg-panel p-3">
+        <div className="text-sm">
+          {overspentCount > 0 ? (
+            <span>
+              <span className="font-medium text-red">{overspentCount}</span>{" "}
+              category{overspentCount === 1 ? "" : "ies"} overspent
+            </span>
+          ) : (
+            <span className="text-muted">No overspending this month</span>
+          )}
+        </div>
+        <button
+          onClick={() => setCoverOpen(true)}
+          disabled={overspentCount === 0}
+          className="rounded-md border border-accent bg-accent/10 px-3 py-1.5 text-xs text-accent hover:bg-accent/20 disabled:opacity-40"
+        >
+          Cover overspending
+        </button>
+      </div>
+
+      {coverOpen && (
+        <CoverPlanModal
+          onClose={() => setCoverOpen(false)}
+          onApplied={() => {
+            globalMutate(
+              (key) =>
+                Array.isArray(key) &&
+                typeof key[0] === "string" &&
+                key[0].startsWith("/api/ynab/"),
+            );
+          }}
+        />
+      )}
 
       <section>
         <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
@@ -194,6 +237,124 @@ function Categories({ revalidateKey }: { revalidateKey: number }) {
           </div>
         </section>
       ))}
+    </div>
+  );
+}
+
+type Finding = {
+  severity: "info" | "warn" | "alert";
+  title: string;
+  body: string;
+  category?: string | null;
+};
+type Analysis = {
+  generated_at: string;
+  summary: string;
+  findings: Finding[];
+};
+type AnalysisResponse = { analysis: Analysis | null; refreshing: boolean };
+
+function Insights() {
+  const { data, mutate, isLoading } = useSWR<AnalysisResponse>(
+    "/api/analysis",
+    fetcher,
+    { refreshInterval: (d) => (d?.refreshing ? 5000 : 0) },
+  );
+  const [running, setRunning] = useState(false);
+
+  const refresh = async () => {
+    setRunning(true);
+    try {
+      const res = await fetch("/api/analysis", { method: "POST" });
+      const json = (await res.json()) as AnalysisResponse;
+      await mutate(json, { revalidate: false });
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const a = data?.analysis;
+  const refreshing = data?.refreshing || running;
+
+  return (
+    <div className="space-y-4 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-xs font-medium uppercase tracking-wider text-muted">
+            Daily analysis
+          </h3>
+          <div className="mt-1 text-xs text-muted">
+            {a
+              ? `Last run ${new Date(a.generated_at).toLocaleString()}`
+              : isLoading
+                ? "Loading…"
+                : "No analysis yet."}
+            {refreshing && a ? " · refreshing…" : ""}
+          </div>
+        </div>
+        <button
+          onClick={refresh}
+          disabled={running}
+          className="rounded-md border border-border bg-panel px-3 py-1.5 text-xs hover:bg-panel-2 disabled:opacity-50"
+        >
+          {running ? "Running…" : "Run now"}
+        </button>
+      </div>
+
+      {!a && refreshing && (
+        <div className="rounded-lg border border-border bg-panel p-4 text-sm text-muted">
+          Generating today&apos;s analysis…
+        </div>
+      )}
+
+      {a && (
+        <>
+          <div className="rounded-lg border border-border bg-panel p-4 text-sm leading-relaxed">
+            {a.summary}
+          </div>
+          <div className="space-y-2">
+            {a.findings.map((f, i) => (
+              <FindingCard key={i} f={f} />
+            ))}
+            {a.findings.length === 0 && (
+              <div className="rounded-lg border border-border bg-panel p-4 text-sm text-muted">
+                Nothing to flag right now.
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function FindingCard({ f }: { f: Finding }) {
+  const tone =
+    f.severity === "alert"
+      ? "border-red/40 bg-red/5"
+      : f.severity === "warn"
+        ? "border-accent/40 bg-accent/5"
+        : "border-border bg-panel";
+  const badgeTone =
+    f.severity === "alert"
+      ? "bg-red/15 text-red"
+      : f.severity === "warn"
+        ? "bg-accent/15 text-accent"
+        : "bg-panel-2 text-muted";
+  return (
+    <div className={`rounded-lg border p-4 ${tone}`}>
+      <div className="mb-1 flex items-center gap-2">
+        <span
+          className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${badgeTone}`}
+        >
+          {f.severity}
+        </span>
+        <h4 className="text-sm font-medium">{f.title}</h4>
+        {f.category && (
+          <span className="text-xs text-muted">· {f.category}</span>
+        )}
+      </div>
+      <p className="text-sm leading-relaxed text-muted">{f.body}</p>
     </div>
   );
 }

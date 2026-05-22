@@ -1,0 +1,56 @@
+{
+  "generated_at": "2026-05-22T15:25:14.030Z",
+  "summary": "Bailey's Budget is in solid overall shape — $90,000 emergency fund, $19,967.15 in Home Improvements, and an impressive 274-day age of money — but the current month (May 2026) has several issues that need attention. A $2,040.30 Airbnb charge blew through the Travel category, which was only funded at $5.51, and groceries are already $218.18 overspent with 9 days left in the month. There's also $11,502.77 sitting in Ready to Assign three weeks into the month, a backlog of ~50 unapproved transactions, and a handful of uncategorized items including a $20 Pelicon Point charge from May 20.",
+  "findings": [
+    {
+      "severity": "alert",
+      "title": "Travel category blown out by $2,040.30 Airbnb",
+      "body": "A $2,040.30 Airbnb charge on 2026-05-12 hit a Travel category that was only budgeted $5.51 for May, leaving an available balance of -$2,040.30. This needs to be covered immediately — likely by reassigning from Ready to Assign or pulling from the Home Improvements/Cash Savings buffer.",
+      "category": "Travel"
+    },
+    {
+      "severity": "alert",
+      "title": "Groceries overspent with a week+ to go",
+      "body": "🛒 Groceries shows -$218.18 available: $1,296.76 spent against a $1,078.58 budget, and we're only at 2026-05-22. Big drivers were Costco $474.04 (5/15) and back-to-back Publix $120.01 + Winn-Dixie $98.17 on 5/20. Expect another ~$200–$300 before month-end; assign more or rein in shopping.",
+      "category": "🛒 Groceries"
+    },
+    {
+      "severity": "alert",
+      "title": "Medical category unfunded — $404 chiropractor charge",
+      "body": "Medical has -$404.00 available because a Shalom Family Chiropractic charge on 2026-05-06 hit a category that was never budgeted this month. Fund it from Ready to Assign so it doesn't roll forward as red.",
+      "category": "Medical"
+    },
+    {
+      "severity": "warn",
+      "title": "$11,502.77 still unassigned three weeks into May",
+      "body": "Ready to Assign is $11,502.77 and the most recent paycheck ($4,132.91 on 2026-05-15) hasn't been distributed. Assigning this would also cover the overspent categories above (Travel -$2,040.30, Groceries -$218.18, Medical -$404, Auto Insurance -$14.34, Drinks/Coffee -$18.10, Dining out -$9.19)."
+    },
+    {
+      "severity": "warn",
+      "title": "~50 transactions sitting unapproved",
+      "body": "The unapproved queue includes routine items going back to early May (Progressive $80.83 on 5/21, the 5/15 paycheck of $4,132.91, Toyota Financial $533.92 on 5/19, etc.). Approving these regularly keeps reports trustworthy and catches duplicates."
+    },
+    {
+      "severity": "warn",
+      "title": "Uncategorized transactions need assignment",
+      "body": "Several May transactions remain uncategorized: Pelicon Point LLC -$20.00 (5/20), Charlotte Essential -$5.67 (5/20), a PayPal transfer -$18.00 (5/18), and Cloud Vxh4xx -$10.54 (5/03). Total -$54.21 is showing in the Uncategorized bucket.",
+      "category": "Uncategorized"
+    },
+    {
+      "severity": "warn",
+      "title": "Minor overspends to clean up",
+      "body": "Smaller red categories that are easy to true up: 🛠 Auto insurance -$14.34 (Progressive came in $14.34 over the $253 budget), Drinks/Coffee -$18.10 (Starbucks $18.10 vs. $10 budgeted), 🍽️ Dining out -$9.19, and Work -$6.00. Total is under $50 but they'll all turn into credit-card-payment surprises if ignored."
+    },
+    {
+      "severity": "info",
+      "title": "Kylee Fun pace is heavy but still in the black",
+      "body": "Kylee Fun has spent $482.96 of the $500 budgeted this month (balance $1,091.17 thanks to rollover). Lots of small Roots Coffeehouse and Target visits — worth noting if the goal is to grow that buffer rather than spend it down.",
+      "category": "Kylee Fun"
+    },
+    {
+      "severity": "info",
+      "title": "Strong savings posture",
+      "body": "Emergency Fund holds $90,000, Home Improvements $19,967.15, Auto maintenance $2,721.85, and the $238.74 interest deposit on 5/13 nudged Cash Savings to $2,218.89. Age of money is 274 days — well beyond a healthy threshold."
+    }
+  ]
+}
