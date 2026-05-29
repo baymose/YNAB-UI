@@ -3,10 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 import { Markdown } from "./Markdown";
 
+type PendingAction = {
+  id: string;
+  token: string;
+  toolName: string;
+  title: string;
+  detail: string;
+  destructive: boolean;
+  expiresAt: string;
+  status?: "pending" | "approved" | "rejected" | "running" | "error";
+  error?: string;
+};
+
 type Msg = {
   role: "user" | "assistant";
   content: string;
   tools?: { name: string }[] | null;
+  pendingActions?: PendingAction[];
 };
 
 type Toast = {
@@ -36,7 +49,11 @@ export function Chat({
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = window.localStorage.getItem("chat-sidebar-open");
+    return stored === null ? true : stored === "1";
+  });
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   function pushToast(title: string, detail: string) {
@@ -47,11 +64,6 @@ export function Chat({
     }, 5000);
   }
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("chat-sidebar-open");
-    if (stored !== null) setSidebarOpen(stored === "1");
-  }, []);
 
   useEffect(() => {
     localStorage.setItem("chat-sidebar-open", sidebarOpen ? "1" : "0");
@@ -112,6 +124,43 @@ export function Chat({
       const remaining = chats.filter((c) => c.id !== id);
       if (remaining.length > 0) await selectChat(remaining[0].id);
       else await newChat();
+    }
+  }
+
+  async function decidePendingAction(
+    messageIndex: number,
+    action: PendingAction,
+    decision: "approve" | "reject",
+  ) {
+    if (!currentChatId || action.status !== "pending") return;
+
+    setMessages((prev) => updatePendingAction(prev, messageIndex, action.id, { status: "running" }));
+    try {
+      const res = await fetch("/api/chat/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatId: currentChatId, token: action.token, decision }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to update pending action");
+
+      setMessages((prev) =>
+        updatePendingAction(prev, messageIndex, action.id, {
+          status: decision === "approve" ? "approved" : "rejected",
+        }),
+      );
+      if (decision === "approve") {
+        const summary = data?.summary as { title?: string; detail?: string } | null | undefined;
+        pushToast(summary?.title ?? "Action approved", summary?.detail ?? action.detail);
+        onMutate();
+      } else {
+        pushToast("Action rejected", "No changes were made.");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setMessages((prev) =>
+        updatePendingAction(prev, messageIndex, action.id, { status: "error", error: message }),
+      );
     }
   }
 
@@ -189,6 +238,21 @@ export function Chat({
             if (summary && summary.title) {
               pushToast(summary.title, summary.detail ?? "");
             }
+          } else if (event === "pending_action") {
+            setActiveTool(null);
+            setMessages((prev) => {
+              const copy = [...prev];
+              const last = copy[copy.length - 1];
+              copy[copy.length - 1] = {
+                ...last,
+                pendingActions: [
+                  ...(last.pendingActions ?? []),
+                  { ...(data as PendingAction), status: "pending" },
+                ],
+              };
+              return copy;
+            });
+            scrollToBottom();
           } else if (event === "title") {
             setChats((prev) =>
               prev.map((c) =>
@@ -386,7 +450,12 @@ export function Chat({
           )}
 
           {messages.map((m, i) => (
-            <MessageBubble key={i} msg={m} />
+            <MessageBubble
+              key={i}
+              msg={m}
+              messageIndex={i}
+              onDecision={decidePendingAction}
+            />
           ))}
 
           {busy && activeTool && (
@@ -431,7 +500,15 @@ export function Chat({
   );
 }
 
-function MessageBubble({ msg }: { msg: Msg }) {
+function MessageBubble({
+  msg,
+  messageIndex,
+  onDecision,
+}: {
+  msg: Msg;
+  messageIndex: number;
+  onDecision: (messageIndex: number, action: PendingAction, decision: "approve" | "reject") => void;
+}) {
   const isUser = msg.role === "user";
   return (
     <div className={`flex fade-up ${isUser ? "justify-end" : "justify-start"}`}>
@@ -461,13 +538,92 @@ function MessageBubble({ msg }: { msg: Msg }) {
           ) : (
             <Markdown text={msg.content} />
           )
-        ) : (
+        ) : msg.pendingActions && msg.pendingActions.length > 0 ? null : (
           <span className="inline-flex items-center gap-2 italic text-muted">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
             thinking…
           </span>
         )}
+        {!isUser && msg.pendingActions && msg.pendingActions.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {msg.pendingActions.map((action) => (
+              <PendingActionCard
+                key={action.id}
+                action={action}
+                onApprove={() => onDecision(messageIndex, action, "approve")}
+                onReject={() => onDecision(messageIndex, action, "reject")}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+function PendingActionCard({
+  action,
+  onApprove,
+  onReject,
+}: {
+  action: PendingAction;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  const status = action.status ?? "pending";
+  const isPending = status === "pending" || status === "error";
+  return (
+    <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs">
+      <div className="flex items-start gap-2">
+        <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-amber-400 text-[11px] font-bold text-background">
+          !
+        </span>
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="font-semibold text-foreground">{action.title}</div>
+          <div className="break-words text-muted">{action.detail}</div>
+          <div className="font-mono text-[10px] text-muted-2">{action.toolName}</div>
+          {action.error && <div className="text-red-300">{action.error}</div>}
+          <div className="pt-2">
+            {isPending ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={onApprove}
+                  className="rounded-xl bg-accent px-3 py-1.5 font-semibold text-background transition hover:bg-accent-2"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={onReject}
+                  className="rounded-xl border border-border px-3 py-1.5 font-semibold text-muted transition hover:bg-panel-2 hover:text-foreground"
+                >
+                  Reject
+                </button>
+              </div>
+            ) : (
+              <span className="rounded-full bg-panel-3 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                {status}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function updatePendingAction(
+  messages: Msg[],
+  messageIndex: number,
+  actionId: string,
+  patch: Partial<PendingAction>,
+): Msg[] {
+  return messages.map((message, index) => {
+    if (index !== messageIndex) return message;
+    return {
+      ...message,
+      pendingActions: (message.pendingActions ?? []).map((action) =>
+        action.id === actionId ? { ...action, ...patch } : action,
+      ),
+    };
+  });
 }

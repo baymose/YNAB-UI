@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { and, asc, eq } from "drizzle-orm";
 import { anthropic, buildSystemPrompt, MODEL } from "@/lib/anthropic";
 import { runTool, tools, WRITE_TOOLS } from "@/lib/tools";
+import { createPendingAction } from "@/lib/pending-actions";
 import { db } from "@/db/client";
 import { chats, memories as memoriesTable, messages as messagesTable } from "@/db/schema";
 import { requireUserId } from "@/lib/session";
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
           { role: "user", content: message },
         ];
 
-        let didMutate = false;
+        const didMutate = false;
         let assistantText = "";
         const assistantTools: { name: string }[] = [];
 
@@ -109,12 +110,36 @@ export async function POST(req: Request) {
           const toolResults: Anthropic.ToolResultBlockParam[] = [];
           for (const block of response.content) {
             if (block.type !== "tool_use") continue;
-            const result = await runTool(
-              block.name,
-              (block.input ?? {}) as Record<string, unknown>,
-              { userId },
-            );
-            if (WRITE_TOOLS.has(block.name)) didMutate = true;
+            const input = (block.input ?? {}) as Record<string, unknown>;
+
+            if (WRITE_TOOLS.has(block.name)) {
+              const pendingAction = createPendingAction({
+                toolName: block.name,
+                input,
+                userId,
+                chatId,
+              });
+              send("pending_action", pendingAction);
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: block.id,
+                content: JSON.stringify({
+                  pending_approval: true,
+                  message:
+                    "This write action was not executed. The user must approve or reject the pending action in the chat UI.",
+                  action: {
+                    id: pendingAction.id,
+                    toolName: pendingAction.toolName,
+                    title: pendingAction.title,
+                    detail: pendingAction.detail,
+                    expiresAt: pendingAction.expiresAt,
+                  },
+                }),
+              });
+              continue;
+            }
+
+            const result = await runTool(block.name, input, { userId });
             if (block.name === "save_memory" || block.name === "delete_memory") {
               memoryContents = await loadMemoryContents();
             }
