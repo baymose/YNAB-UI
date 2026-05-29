@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type Theme = "light" | "dark";
 
@@ -14,13 +14,7 @@ function resolveInitial(): Theme {
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setTheme(resolveInitial());
-    setMounted(true);
-  }, []);
+  const [theme, setTheme] = useState<Theme>(resolveInitial);
 
   function toggle() {
     const next: Theme = theme === "dark" ? "light" : "dark";
@@ -29,11 +23,6 @@ export function ThemeToggle() {
     try {
       localStorage.setItem("theme", next);
     } catch {}
-  }
-
-  // Render an inert placeholder before mount to avoid hydration mismatch
-  if (!mounted) {
-    return <div className="h-8 w-14 rounded-full bg-panel-3/50" aria-hidden />;
   }
 
   const isDark = theme === "dark";
